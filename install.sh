@@ -3,7 +3,22 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
+# --- Preflight checks ---
+echo "=== Preflight checks ==="
+MISSING=""
+command -v git &> /dev/null || MISSING="$MISSING git"
+command -v node &> /dev/null || MISSING="$MISSING node"
+command -v npm &> /dev/null || MISSING="$MISSING npm"
+if [ -n "$MISSING" ]; then
+  echo "ERROR: Missing required tools:$MISSING"
+  echo "Install them before running this script."
+  exit 1
+fi
+echo "All prerequisites found."
+
+echo ""
 echo "=== Installing dotfiles ==="
+echo "NOTE: All existing config files will be overwritten (not merged)."
 
 # --- Claude Code ---
 echo ""
@@ -49,6 +64,64 @@ if ! echo "$PATH" | grep -q "$HOME/.local/bin"; then
   [ -f "$HOME/.zshrc" ] && SHELL_RC="$HOME/.zshrc"
   echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$SHELL_RC"
   echo "Added ~/.local/bin to PATH in $SHELL_RC"
+fi
+
+# --- Verification ---
+echo ""
+echo "=== Verification ==="
+PASS=0
+FAIL=0
+
+# 1. Claude Code deny rules
+if grep -q 'Read(\*\*/.env)' ~/.claude/settings.json 2>/dev/null; then
+  echo "  [PASS] Claude Code deny rules active"
+  PASS=$((PASS+1))
+else
+  echo "  [FAIL] Claude Code deny rules missing"
+  FAIL=$((FAIL+1))
+fi
+
+# 2. Codex permissions profile
+if grep -q 'default_permissions = "global_lockdown"' ~/.codex/config.toml 2>/dev/null; then
+  echo "  [PASS] Codex global_lockdown profile active"
+  PASS=$((PASS+1))
+else
+  echo "  [FAIL] Codex global_lockdown profile missing"
+  FAIL=$((FAIL+1))
+fi
+
+# 3. codex-safe wrapper
+if [ -x ~/.local/bin/codex-safe ]; then
+  echo "  [PASS] codex-safe wrapper installed and executable"
+  PASS=$((PASS+1))
+else
+  echo "  [FAIL] codex-safe wrapper missing or not executable"
+  FAIL=$((FAIL+1))
+fi
+
+# 4. codex-safe blocks --profile override
+if ~/.local/bin/codex-safe --profile foo --help 2>/dev/null; then
+  echo "  [FAIL] codex-safe allowed --profile override"
+  FAIL=$((FAIL+1))
+else
+  echo "  [PASS] codex-safe blocks --profile override"
+  PASS=$((PASS+1))
+fi
+
+# 5. Copilot instructions present
+if [ -f ~/.copilot/instructions/global-contract.instructions.md ]; then
+  echo "  [PASS] Copilot global instructions present"
+  PASS=$((PASS+1))
+else
+  echo "  [FAIL] Copilot global instructions missing"
+  FAIL=$((FAIL+1))
+fi
+
+echo ""
+echo "Results: $PASS passed, $FAIL failed"
+
+if [ "$FAIL" -gt 0 ]; then
+  echo "WARNING: Some checks failed. Review output above."
 fi
 
 echo ""
