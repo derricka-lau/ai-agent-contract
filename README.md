@@ -31,6 +31,8 @@ dotfiles/
 │       ├── php.instructions.md               # PHP/CakePHP (applyTo: "*.php")
 │       ├── python.instructions.md            # Python (applyTo: "*.py")
 │       └── typescript.instructions.md        # TS/React (applyTo: "*.{ts,tsx}")
+├── gitconfig                      # Global git config (Cardiff email default)
+├── gitconfig-github               # Conditional include (GitHub noreply email)
 ├── codex-safe                     # Wrapper enforcing secure-global profile
 ├── install.sh                     # Installs everything + runs verification
 ├── uninstall.sh                   # Removes all installed files
@@ -58,7 +60,8 @@ cd ~/dotfiles
 1. Check prerequisites (git, node, npm)
 2. **Overwrite** existing config files (not merge) — this is intentional for reproducibility
 3. Install CLIs if missing
-4. Run 5 verification checks and report results
+4. Configure git with conditional email (GitHub noreply / GitLab Cardiff)
+5. Run 6 verification checks and report results
 
 ### VSCode devcontainers (automatic)
 
@@ -89,6 +92,7 @@ Every devcontainer will automatically clone this repo and run `install.sh` on cr
 | Copy Codex config + AGENTS.md | `~/.codex/` | Full overwrite |
 | Install `codex-safe` wrapper | `~/.local/bin/` | Full overwrite |
 | Copy all Copilot instruction files | `~/.copilot/instructions/` | Full overwrite |
+| Copy git config + GitHub conditional include | `~/.gitconfig`, `~/.gitconfig-github` | Full overwrite |
 | Add `~/.local/bin` to PATH | `~/.zshrc` or `~/.bashrc` | Append if missing |
 
 ## Sensitive file protection
@@ -113,8 +117,20 @@ Blocked files: `.env`, `.env.*`, `settings.local.php`, `app.local.php`
 | codex-safe wrapper | Executable at `~/.local/bin/codex-safe` |
 | codex-safe blocks override | `codex-safe --profile foo` exits with code 64 |
 | Copilot instructions | `global-contract.instructions.md` exists in `~/.copilot/instructions/` |
+| Git conditional email | `hasconfig:remote` present in `~/.gitconfig` |
 
 Re-run verification at any time: `./install.sh` (idempotent — safe to re-run).
+
+## Git conditional email
+
+Uses `includeIf hasconfig:remote` (requires Git 2.36+) to automatically select the right email based on remote URL:
+
+| Remote | Email used |
+|---|---|
+| `github.com` (HTTPS or SSH) | `151698873+derricka-lau@users.noreply.github.com` |
+| Everything else (GitLab, Cardiff) | `lauf@cardiff.ac.uk` |
+
+No per-repo config needed. Works for any new repo automatically.
 
 ## Global contract (all three tools)
 
