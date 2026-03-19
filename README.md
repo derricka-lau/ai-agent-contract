@@ -2,23 +2,26 @@
 
 Personal dotfiles for bootstrapping AI coding agents on any machine — local or devcontainer.
 
-One `install.sh` configures both Claude Code and Codex CLI with identical rules.
+One `install.sh` configures Claude Code, Codex CLI, and GitHub Copilot with identical rules.
 
 ## What's included
 
 ```
 dotfiles/
 ├── claude/
-│   ├── settings.json          # Deny rules (Read/Edit/Bash blocked for sensitive files)
-│   ├── CLAUDE.md              # Global contract (instructions loaded every session)
-│   ├── MEMORY.md              # Memory index
+│   ├── settings.json                  # Deny rules (deterministic, runtime-enforced)
+│   ├── CLAUDE.md                      # Global contract
+│   ├── MEMORY.md                      # Memory index
 │   └── memory/
-│       └── user_role.md       # User context (tech stack, workplace)
+│       └── user_role.md               # User context
 ├── codex/
-│   ├── config.toml            # Permissions profile with filesystem deny rules
-│   └── AGENTS.md              # Global contract (instructions loaded every session)
-├── codex-safe                 # Wrapper enforcing secure-global profile
-├── install.sh                 # Installs everything to correct locations
+│   ├── config.toml                    # Deny rules (deterministic, filesystem "none")
+│   └── AGENTS.md                      # Global contract
+├── copilot/
+│   └── instructions/
+│       └── global-contract.instructions.md  # Global contract + .env guidance
+├── codex-safe                         # Wrapper enforcing secure-global profile
+├── install.sh                         # Installs everything
 └── README.md
 ```
 
@@ -42,38 +45,38 @@ Add to your VSCode user settings (`Cmd+Shift+P` → "Preferences: Open User Sett
 "dotfiles.targetPath": "~/dotfiles"
 ```
 
-Every devcontainer will automatically clone this repo and run `install.sh` on creation.
+Also ensure Copilot picks up the global instructions:
+
+```json
+"chat.instructionsFilesLocations": {
+  "~/.copilot/instructions": true
+}
+```
 
 ## What `install.sh` does
 
 | Step | Target |
 |---|---|
-| Copy `claude/settings.json` | `~/.claude/settings.json` |
-| Copy `claude/CLAUDE.md` | `~/.claude/CLAUDE.md` |
-| Copy `claude/MEMORY.md` + memory files | `~/.claude/MEMORY.md` + `~/.claude/memory/` |
-| Install Claude Code CLI (if missing) | `npm install -g @anthropic-ai/claude-code` |
-| Copy `codex/config.toml` | `~/.codex/config.toml` |
-| Copy `codex/AGENTS.md` | `~/.codex/AGENTS.md` |
-| Copy `codex-safe` | `~/.local/bin/codex-safe` |
+| Copy Claude Code settings + instructions + memory | `~/.claude/` |
+| Install Claude Code CLI (if missing) | npm global |
+| Copy Codex config + AGENTS.md | `~/.codex/` |
+| Install `codex-safe` wrapper | `~/.local/bin/` |
+| Copy Copilot instructions | `~/.copilot/instructions/` |
 | Add `~/.local/bin` to PATH | `~/.zshrc` or `~/.bashrc` |
 
-## Blocked files
+## Sensitive file protection
 
-Both tools are deterministically blocked from reading or editing:
+| Tool | Mechanism | Deterministic? |
+|---|---|---|
+| **Claude Code** | `permissions.deny` rules in settings.json | Yes — CLI runtime gate |
+| **Codex CLI** | `filesystem "none"` in config.toml | Yes — sandbox gate |
+| **Copilot** | Instructions in `.instructions.md` | No — LLM guidance only |
 
-- `.env` / `.env.*` (any depth)
-- `settings.local.php` (any depth)
-- `app.local.php` (any depth)
+Blocked files: `.env`, `.env.*`, `settings.local.php`, `app.local.php`
 
-### Claude Code
-Deny rules in `~/.claude/settings.json` block `Read`, `Edit`, and `Bash cat` at CLI runtime level.
+**Note:** Copilot has no deterministic file deny mechanism. The instructions tell it not to read sensitive files, but this is best-effort guidance, not a hard gate. For true protection from Copilot, rely on OS-level file permissions or exclude secrets from the workspace.
 
-### Codex CLI
-Filesystem permissions profile `global_lockdown` in `~/.codex/config.toml` sets sensitive paths to `"none"`. The `codex-safe` wrapper enforces the `secure-global` profile and blocks `--profile` overrides.
-
-## Global contract
-
-Both tools load the same contract (from `CLAUDE.md` / `AGENTS.md`):
+## Global contract (all three tools)
 
 - SOLID and Clean Architecture by default
 - TDD-first, strict types, no shortcuts
