@@ -20,6 +20,23 @@ echo ""
 echo "=== Installing dotfiles ==="
 echo "NOTE: All existing config files will be overwritten (not merged)."
 
+# --- Backup existing config ---
+BACKUP_DIR="$HOME/.dotfiles-backup/$(date +%Y%m%d-%H%M%S)"
+BACKED_UP=false
+for f in ~/.claude/settings.json ~/.claude/CLAUDE.md ~/.codex/config.toml ~/.codex/AGENTS.md; do
+  if [ -f "$f" ]; then
+    if [ "$BACKED_UP" = false ]; then
+      mkdir -p "$BACKUP_DIR"
+      echo "Backing up existing config to $BACKUP_DIR"
+      BACKED_UP=true
+    fi
+    cp "$f" "$BACKUP_DIR/"
+  fi
+done
+if [ "$BACKED_UP" = true ]; then
+  echo "Backup complete. Restore with: cp $BACKUP_DIR/* to their original locations."
+fi
+
 # --- Claude Code ---
 echo ""
 echo "--- Claude Code ---"
@@ -99,13 +116,15 @@ else
   FAIL=$((FAIL+1))
 fi
 
-# 4. codex-safe blocks --profile override
-if ~/.local/bin/codex-safe --profile foo --help 2>/dev/null; then
-  echo "  [FAIL] codex-safe allowed --profile override"
-  FAIL=$((FAIL+1))
-else
-  echo "  [PASS] codex-safe blocks --profile override"
+# 4. codex-safe blocks --profile override (must exit 64)
+EXIT_CODE=0
+~/.local/bin/codex-safe --profile foo --help 2>/dev/null || EXIT_CODE=$?
+if [ "$EXIT_CODE" -eq 64 ]; then
+  echo "  [PASS] codex-safe blocks --profile override (exit 64)"
   PASS=$((PASS+1))
+else
+  echo "  [FAIL] codex-safe did not exit 64 (got $EXIT_CODE)"
+  FAIL=$((FAIL+1))
 fi
 
 # 5. Copilot instructions present

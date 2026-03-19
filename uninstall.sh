@@ -3,8 +3,18 @@ set -euo pipefail
 
 echo "=== Removing dotfiles-managed config ==="
 echo "This removes ONLY files installed by install.sh."
-echo ""
 
+# Check for backups
+BACKUP_BASE="$HOME/.dotfiles-backup"
+if [ -d "$BACKUP_BASE" ]; then
+  LATEST_BACKUP=$(ls -td "$BACKUP_BASE"/*/ 2>/dev/null | head -1)
+  if [ -n "$LATEST_BACKUP" ]; then
+    echo "Backup found at: $LATEST_BACKUP"
+    echo "After uninstall, restore with: cp ${LATEST_BACKUP}* to their original locations."
+  fi
+fi
+
+echo ""
 read -p "Continue? (y/N) " -n 1 -r
 echo ""
 if [[ ! $REPLY =~ ^[Yy]$ ]]; then
@@ -35,3 +45,6 @@ echo "Removed Copilot instructions."
 echo ""
 echo "=== Done. All dotfiles-managed config removed. ==="
 echo "NOTE: Claude Code CLI (npm package) was NOT removed. Run 'npm uninstall -g @anthropic-ai/claude-code' to remove it."
+if [ -n "${LATEST_BACKUP:-}" ]; then
+  echo "NOTE: Backups still at $LATEST_BACKUP — delete manually when no longer needed."
+fi
