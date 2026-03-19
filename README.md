@@ -1,15 +1,26 @@
 # Dotfiles
 
-Personal dotfiles for bootstrapping development environments — local machines and devcontainers.
+Personal dotfiles for bootstrapping AI coding agents on any machine — local or devcontainer.
+
+One `install.sh` configures both Claude Code and Codex CLI with identical rules.
 
 ## What's included
 
-| File | Purpose |
-|---|---|
-| `claude-settings.json` | Claude Code global deny rules |
-| `codex-config.toml` | Codex CLI global permissions profile with filesystem deny rules |
-| `codex-safe` | Wrapper that enforces `secure-global` profile and blocks `--profile` overrides |
-| `install.sh` | Copies all settings into place and installs CLIs if missing |
+```
+dotfiles/
+├── claude/
+│   ├── settings.json          # Deny rules (Read/Edit/Bash blocked for sensitive files)
+│   ├── CLAUDE.md              # Global contract (instructions loaded every session)
+│   ├── MEMORY.md              # Memory index
+│   └── memory/
+│       └── user_role.md       # User context (tech stack, workplace)
+├── codex/
+│   ├── config.toml            # Permissions profile with filesystem deny rules
+│   └── AGENTS.md              # Global contract (instructions loaded every session)
+├── codex-safe                 # Wrapper enforcing secure-global profile
+├── install.sh                 # Installs everything to correct locations
+└── README.md
+```
 
 ## Setup
 
@@ -33,26 +44,43 @@ Add to your VSCode user settings (`Cmd+Shift+P` → "Preferences: Open User Sett
 
 Every devcontainer will automatically clone this repo and run `install.sh` on creation.
 
+## What `install.sh` does
+
+| Step | Target |
+|---|---|
+| Copy `claude/settings.json` | `~/.claude/settings.json` |
+| Copy `claude/CLAUDE.md` | `~/.claude/CLAUDE.md` |
+| Copy `claude/MEMORY.md` + memory files | `~/.claude/MEMORY.md` + `~/.claude/memory/` |
+| Install Claude Code CLI (if missing) | `npm install -g @anthropic-ai/claude-code` |
+| Copy `codex/config.toml` | `~/.codex/config.toml` |
+| Copy `codex/AGENTS.md` | `~/.codex/AGENTS.md` |
+| Copy `codex-safe` | `~/.local/bin/codex-safe` |
+| Add `~/.local/bin` to PATH | `~/.zshrc` or `~/.bashrc` |
+
 ## Blocked files
 
-Both Claude Code and Codex CLI are deterministically blocked from reading or editing:
+Both tools are deterministically blocked from reading or editing:
 
 - `.env` / `.env.*` (any depth)
 - `settings.local.php` (any depth)
 - `app.local.php` (any depth)
 
 ### Claude Code
-
-Deny rules in `~/.claude/settings.json` block `Read`, `Edit`, and `Bash cat` at CLI runtime level. Cannot be bypassed by prompt injection or context compaction.
+Deny rules in `~/.claude/settings.json` block `Read`, `Edit`, and `Bash cat` at CLI runtime level.
 
 ### Codex CLI
+Filesystem permissions profile `global_lockdown` in `~/.codex/config.toml` sets sensitive paths to `"none"`. The `codex-safe` wrapper enforces the `secure-global` profile and blocks `--profile` overrides.
 
-Filesystem permissions profile `global_lockdown` in `~/.codex/config.toml` sets sensitive paths to `"none"`. The `codex-safe` wrapper enforces the `secure-global` profile and prevents `--profile` overrides.
+## Global contract
 
-## What `install.sh` does
+Both tools load the same contract (from `CLAUDE.md` / `AGENTS.md`):
 
-1. Copies `claude-settings.json` → `~/.claude/settings.json`
-2. Installs Claude Code CLI via npm (if missing)
-3. Copies `codex-config.toml` → `~/.codex/config.toml`
-4. Copies `codex-safe` → `~/.local/bin/codex-safe`
-5. Adds `~/.local/bin` to `PATH` if not present
+- SOLID and Clean Architecture by default
+- TDD-first, strict types, no shortcuts
+- Decision gate: 3 options with trade-offs before implementation
+- British English in all output
+- Breach protocol with stop phrase
+
+## Updating
+
+Edit files in this repo, push, then re-run `install.sh` on each machine (or rebuild devcontainers).
