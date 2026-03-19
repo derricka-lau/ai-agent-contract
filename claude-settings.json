@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(**/.env)",
+      "Read(**/.env.*)",
+      "Read(**/settings.local.php)",
+      "Read(**/app.local.php)",
+      "Edit(**/.env)",
+      "Edit(**/.env.*)",
+      "Edit(**/settings.local.php)",
+      "Edit(**/app.local.php)"
+    ]
+  }
+}
