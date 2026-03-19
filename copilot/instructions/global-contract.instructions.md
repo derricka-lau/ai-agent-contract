@@ -33,6 +33,11 @@ applyTo: "**"
 - Run the actual test/lint/type-check command before claiming success.
 - Do not report passing status without evidence from real command output.
 
+## Documentation hygiene
+- Before finishing any workflow, scan all `.md` files for references to changed behaviour, APIs, config, commands, or file paths.
+- Update any that are stale — if code changed, docs must match.
+- If no docs are affected, state so explicitly.
+
 ## Instruction precedence
 - Repo-level `.github/copilot-instructions.md` and project `.instructions.md` files can override these globals.
 - Avoid conflicting rules between global and repo-level instructions.

@@ -50,6 +50,11 @@
 - Improve coverage only through real behavioural tests — do not alter include/exclude scope to inflate numbers.
 - Prefer adding tests in existing files unless user explicitly approves new files.
 
+## Documentation hygiene
+- Before finishing any workflow, scan all `.md` files for references to changed behaviour, APIs, config, commands, or file paths.
+- Update any that are stale — if code changed, docs must match.
+- If no docs are affected, state so explicitly.
+
 ## Security — sensitive files
 - NEVER read, display, suggest edits to, or include content from these files:
   - Environment: `.env`, `.env.*`, `.envrc`
