@@ -36,6 +36,13 @@ cp "$SCRIPT_DIR/codex-safe" ~/.local/bin/codex-safe
 chmod +x ~/.local/bin/codex-safe
 echo "codex-safe wrapper installed."
 
+# --- GitHub Copilot ---
+echo ""
+echo "--- GitHub Copilot ---"
+mkdir -p ~/.copilot/instructions
+cp "$SCRIPT_DIR/copilot/instructions/global-contract.instructions.md" ~/.copilot/instructions/
+echo "Copilot global instructions installed."
+
 # Ensure ~/.local/bin is on PATH
 if ! echo "$PATH" | grep -q "$HOME/.local/bin"; then
   SHELL_RC="$HOME/.bashrc"
@@ -45,4 +52,4 @@ if ! echo "$PATH" | grep -q "$HOME/.local/bin"; then
 fi
 
 echo ""
-echo "=== Done. Both Claude Code and Codex CLI are configured. ==="
+echo "=== Done. Claude Code, Codex CLI, and Copilot are configured. ==="
