@@ -7,14 +7,13 @@ applyTo: "*.php"
 ## Testing
 - Use `assertSame()` over `assertTrue($x === 'y')` — strict equality, not loose.
 - Use `assertArrayHasKey()` over `assertTrue(isset($arr['key']))`.
-- Extend `BaseAdminTestCase` or `BaseApiTestCase` for controller tests, not raw `IntegrationTestTrait`.
 - Always set up CSRF/security tokens for POST request tests.
 - Verify both HTTP response and database state in integration tests.
 
 ## Code style
 - Follow PSR-12. Use strict types: `declare(strict_types=1)`.
 - Use CakePHP conventions: Table classes for queries, Entity classes for domain logic, virtual properties for computed fields.
-- Prefer `TableRegistry::getTableLocator()->get()` over direct instantiation.
+- Prefer `$this->fetchTable('TableName')` over direct instantiation or deprecated `TableRegistry` calls.
 - Use CakePHP's built-in validation and build rules over manual checks.
 
 ## Commands
