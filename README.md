@@ -110,6 +110,8 @@ Blocked files:
 - Keys/certs: `*.pem`, `*.key`, `id_rsa`, `id_ed25519`
 - Credentials: `.npmrc`, `.pypirc`, `.netrc`, `~/.aws/credentials`, `~/.azure/*`
 
+> **Note:** `~/.aws/credentials` and `~/.azure/*` are outside the project root. Codex `:project_roots` rules cannot scope to home-directory paths by design — these are protected by the sandbox and by not using `--dangerously-bypass-approvals-and-sandbox`. Claude Code uses `Read(~/.aws/credentials)` home-path syntax as defence-in-depth.
+
 ## Verification
 
 `install.sh` runs these checks automatically after install:
