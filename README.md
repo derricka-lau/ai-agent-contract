@@ -6,8 +6,10 @@ Personal dotfiles for bootstrapping development environments — local machines 
 
 | File | Purpose |
 |---|---|
-| `claude-settings.json` | Claude Code global deny rules — blocks reading/editing `.env`, `.env.*`, `settings.local.php`, `app.local.php` |
-| `install.sh` | Copies settings into place and installs Claude Code CLI if missing |
+| `claude-settings.json` | Claude Code global deny rules |
+| `codex-config.toml` | Codex CLI global permissions profile with filesystem deny rules |
+| `codex-safe` | Wrapper that enforces `secure-global` profile and blocks `--profile` overrides |
+| `install.sh` | Copies all settings into place and installs CLIs if missing |
 
 ## Setup
 
@@ -33,12 +35,24 @@ Every devcontainer will automatically clone this repo and run `install.sh` on cr
 
 ## Blocked files
 
-Claude Code is deterministically blocked from reading or editing:
+Both Claude Code and Codex CLI are deterministically blocked from reading or editing:
 
 - `.env` / `.env.*` (any depth)
 - `settings.local.php` (any depth)
 - `app.local.php` (any depth)
 
-Bash `cat` commands targeting these files are also blocked.
+### Claude Code
 
-These rules are enforced at the CLI runtime level, not by the LLM — they cannot be bypassed by prompt injection or context compaction.
+Deny rules in `~/.claude/settings.json` block `Read`, `Edit`, and `Bash cat` at CLI runtime level. Cannot be bypassed by prompt injection or context compaction.
+
+### Codex CLI
+
+Filesystem permissions profile `global_lockdown` in `~/.codex/config.toml` sets sensitive paths to `"none"`. The `codex-safe` wrapper enforces the `secure-global` profile and prevents `--profile` overrides.
+
+## What `install.sh` does
+
+1. Copies `claude-settings.json` → `~/.claude/settings.json`
+2. Installs Claude Code CLI via npm (if missing)
+3. Copies `codex-config.toml` → `~/.codex/config.toml`
+4. Copies `codex-safe` → `~/.local/bin/codex-safe`
+5. Adds `~/.local/bin` to `PATH` if not present
