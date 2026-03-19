@@ -51,7 +51,11 @@
 - Prefer adding tests in existing files unless user explicitly approves new files.
 
 ## Security — sensitive files
-- NEVER read, display, suggest edits to, or include content from: `.env`, `.env.*`, `settings.local.php`, `app.local.php`.
+- NEVER read, display, suggest edits to, or include content from these files:
+  - Environment: `.env`, `.env.*`, `.envrc`
+  - App config: `settings.local.php`, `app.local.php`
+  - Keys/certs: `*.pem`, `*.key`, `id_rsa`, `id_ed25519`
+  - Credentials: `.npmrc`, `.pypirc`, `.netrc`, `.aws/credentials`, `.azure/*`
 - If asked to work with these files, refuse and explain they contain secrets.
 
 ## Breach protocol

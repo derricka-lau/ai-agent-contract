@@ -33,6 +33,14 @@ applyTo: "**"
 - Run the actual test/lint/type-check command before claiming success.
 - Do not report passing status without evidence from real command output.
 
+## Instruction precedence
+- Repo-level `.github/copilot-instructions.md` and project `.instructions.md` files can override these globals.
+- Avoid conflicting rules between global and repo-level instructions.
+
 ## Security — sensitive files
-- NEVER read, display, suggest edits to, or include content from: `.env`, `.env.*`, `settings.local.php`, `app.local.php`.
+- NEVER read, display, suggest edits to, or include content from these files:
+  - Environment: `.env`, `.env.*`, `.envrc`
+  - App config: `settings.local.php`, `app.local.php`
+  - Keys/certs: `*.pem`, `*.key`, `id_rsa`, `id_ed25519`
+  - Credentials: `.npmrc`, `.pypirc`, `.netrc`, `.aws/credentials`, `.azure/*`
 - If asked to work with these files, refuse and explain they contain secrets.

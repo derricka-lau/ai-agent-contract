@@ -143,5 +143,26 @@ if [ "$FAIL" -gt 0 ]; then
   echo "WARNING: Some checks failed. Review output above."
 fi
 
+# --- Write manifest of installed file hashes ---
+MANIFEST="$HOME/.dotfiles-manifest"
+: > "$MANIFEST"
+for f in \
+  ~/.claude/settings.json \
+  ~/.claude/CLAUDE.md \
+  ~/.claude/MEMORY.md \
+  ~/.claude/memory/user_role.md \
+  ~/.codex/config.toml \
+  ~/.codex/AGENTS.md \
+  ~/.local/bin/codex-safe \
+  ~/.copilot/instructions/global-contract.instructions.md \
+  ~/.copilot/instructions/php.instructions.md \
+  ~/.copilot/instructions/python.instructions.md \
+  ~/.copilot/instructions/typescript.instructions.md; do
+  if [ -f "$f" ]; then
+    shasum -a 256 "$f" >> "$MANIFEST"
+  fi
+done
+echo "Manifest written to $MANIFEST"
+
 echo ""
 echo "=== Done. Claude Code, Codex CLI, and Copilot are configured. ==="

@@ -16,4 +16,4 @@ permissions_profile = "global_lockdown"
 
 [permissions.global_lockdown.filesystem]
 # Keep normal project access while explicitly denying sensitive local config/secrets.
-":project_roots" = { "." = "write", ".env" = "none", ".env.local" = "none", ".env.development" = "none", ".env.production" = "none", ".env.test" = "none", "settings.local.php" = "none", "app.local.php" = "none", "**/.env" = "none", "**/.env.*" = "none", "**/.env.local" = "none", "**/settings.local.php" = "none", "**/app.local.php" = "none" }
+":project_roots" = { "." = "write", ".env" = "none", ".env.local" = "none", ".env.development" = "none", ".env.production" = "none", ".env.test" = "none", ".envrc" = "none", "settings.local.php" = "none", "app.local.php" = "none", "**/.env" = "none", "**/.env.*" = "none", "**/.env.local" = "none", "**/.envrc" = "none", "**/settings.local.php" = "none", "**/app.local.php" = "none", "**/*.pem" = "none", "**/*.key" = "none", "**/id_rsa" = "none", "**/id_ed25519" = "none", "**/.npmrc" = "none", "**/.pypirc" = "none", "**/.netrc" = "none" }
