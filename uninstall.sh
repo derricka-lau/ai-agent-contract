@@ -1,16 +1,19 @@
 #!/bin/bash
 set -euo pipefail
 
+MANIFEST="$HOME/.dotfiles-manifest"
+
 echo "=== Removing dotfiles-managed config ==="
-echo "This removes ONLY files installed by install.sh."
+echo "Only files matching the installed manifest will be removed."
+echo "Modified files will be skipped (not deleted)."
 
 # Check for backups
 BACKUP_BASE="$HOME/.dotfiles-backup"
+LATEST_BACKUP=""
 if [ -d "$BACKUP_BASE" ]; then
   LATEST_BACKUP=$(ls -td "$BACKUP_BASE"/*/ 2>/dev/null | head -1)
   if [ -n "$LATEST_BACKUP" ]; then
     echo "Backup found at: $LATEST_BACKUP"
-    echo "After uninstall, restore with: cp ${LATEST_BACKUP}* to their original locations."
   fi
 fi
 
@@ -22,29 +25,54 @@ if [[ ! $REPLY =~ ^[Yy]$ ]]; then
   exit 0
 fi
 
-# Claude Code
-rm -f ~/.claude/settings.json
-rm -f ~/.claude/CLAUDE.md
-rm -f ~/.claude/MEMORY.md
-rm -f ~/.claude/memory/user_role.md
-echo "Removed Claude Code config."
+# Safe remove: only delete if hash matches manifest
+safe_rm() {
+  local file="$1"
+  if [ ! -f "$file" ]; then
+    return
+  fi
 
-# Codex CLI
-rm -f ~/.codex/config.toml
-rm -f ~/.codex/AGENTS.md
-rm -f ~/.local/bin/codex-safe
-echo "Removed Codex config and codex-safe."
+  if [ -f "$MANIFEST" ]; then
+    INSTALLED_HASH=$(grep "$file" "$MANIFEST" 2>/dev/null | awk '{print $1}')
+    CURRENT_HASH=$(shasum -a 256 "$file" 2>/dev/null | awk '{print $1}')
+    if [ -n "$INSTALLED_HASH" ] && [ "$INSTALLED_HASH" != "$CURRENT_HASH" ]; then
+      echo "  [SKIP] $file — modified since install (not deleted)"
+      return
+    fi
+  fi
 
-# Copilot
-rm -f ~/.copilot/instructions/global-contract.instructions.md
-rm -f ~/.copilot/instructions/php.instructions.md
-rm -f ~/.copilot/instructions/python.instructions.md
-rm -f ~/.copilot/instructions/typescript.instructions.md
-echo "Removed Copilot instructions."
+  rm -f "$file"
+  echo "  [DEL]  $file"
+}
 
 echo ""
-echo "=== Done. All dotfiles-managed config removed. ==="
+
+# Claude Code
+safe_rm ~/.claude/settings.json
+safe_rm ~/.claude/CLAUDE.md
+safe_rm ~/.claude/MEMORY.md
+safe_rm ~/.claude/memory/user_role.md
+echo "Claude Code done."
+
+# Codex CLI
+safe_rm ~/.codex/config.toml
+safe_rm ~/.codex/AGENTS.md
+safe_rm ~/.local/bin/codex-safe
+echo "Codex done."
+
+# Copilot
+safe_rm ~/.copilot/instructions/global-contract.instructions.md
+safe_rm ~/.copilot/instructions/php.instructions.md
+safe_rm ~/.copilot/instructions/python.instructions.md
+safe_rm ~/.copilot/instructions/typescript.instructions.md
+echo "Copilot done."
+
+# Clean up manifest
+rm -f "$MANIFEST"
+
+echo ""
+echo "=== Done. ==="
 echo "NOTE: Claude Code CLI (npm package) was NOT removed. Run 'npm uninstall -g @anthropic-ai/claude-code' to remove it."
-if [ -n "${LATEST_BACKUP:-}" ]; then
+if [ -n "$LATEST_BACKUP" ]; then
   echo "NOTE: Backups still at $LATEST_BACKUP — delete manually when no longer needed."
 fi
