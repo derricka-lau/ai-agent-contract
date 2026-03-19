@@ -9,19 +9,22 @@ One `install.sh` configures Claude Code, Codex CLI, and GitHub Copilot with iden
 ```
 dotfiles/
 ├── claude/
-│   ├── settings.json                  # Deny rules (deterministic, runtime-enforced)
-│   ├── CLAUDE.md                      # Global contract
-│   ├── MEMORY.md                      # Memory index
+│   ├── settings.json              # Deny rules (deterministic, runtime-enforced)
+│   ├── CLAUDE.md                  # Global contract + common commands
+│   ├── MEMORY.md                  # Memory index
 │   └── memory/
-│       └── user_role.md               # User context
+│       └── user_role.md           # User context
 ├── codex/
-│   ├── config.toml                    # Deny rules (deterministic, filesystem "none")
-│   └── AGENTS.md                      # Global contract
+│   ├── config.toml                # Deny rules (deterministic, filesystem "none")
+│   └── AGENTS.md                  # Global contract + common commands
 ├── copilot/
 │   └── instructions/
-│       └── global-contract.instructions.md  # Global contract + .env guidance
-├── codex-safe                         # Wrapper enforcing secure-global profile
-├── install.sh                         # Installs everything
+│       ├── global-contract.instructions.md   # Universal rules (applyTo: "**/")
+│       ├── php.instructions.md               # PHP/CakePHP (applyTo: "*.php")
+│       ├── python.instructions.md            # Python (applyTo: "*.py")
+│       └── typescript.instructions.md        # TS/React (applyTo: "*.{ts,tsx}")
+├── codex-safe                     # Wrapper enforcing secure-global profile
+├── install.sh                     # Installs everything
 └── README.md
 ```
 
@@ -61,28 +64,39 @@ Also ensure Copilot picks up the global instructions:
 | Install Claude Code CLI (if missing) | npm global |
 | Copy Codex config + AGENTS.md | `~/.codex/` |
 | Install `codex-safe` wrapper | `~/.local/bin/` |
-| Copy Copilot instructions | `~/.copilot/instructions/` |
+| Copy all Copilot instruction files | `~/.copilot/instructions/` |
 | Add `~/.local/bin` to PATH | `~/.zshrc` or `~/.bashrc` |
 
 ## Sensitive file protection
 
 | Tool | Mechanism | Deterministic? |
 |---|---|---|
-| **Claude Code** | `permissions.deny` rules in settings.json | Yes — CLI runtime gate |
+| **Claude Code** | `permissions.deny` in settings.json | Yes — CLI runtime gate |
 | **Codex CLI** | `filesystem "none"` in config.toml | Yes — sandbox gate |
 | **Copilot** | Instructions in `.instructions.md` | No — LLM guidance only |
 
 Blocked files: `.env`, `.env.*`, `settings.local.php`, `app.local.php`
 
-**Note:** Copilot has no deterministic file deny mechanism. The instructions tell it not to read sensitive files, but this is best-effort guidance, not a hard gate. For true protection from Copilot, rely on OS-level file permissions or exclude secrets from the workspace.
-
 ## Global contract (all three tools)
 
-- SOLID and Clean Architecture by default
-- TDD-first, strict types, no shortcuts
+- Common commands for test, lint, type-check across PHP, Python, TS
+- Strict types, concrete assertion examples, framework-native patterns
+- SOLID / Clean Architecture, dependency direction
+- Git discipline: no force-push, imperative commit messages
+- Concise output: no trailing summaries, no unnecessary docstrings
 - Decision gate: 3 options with trade-offs before implementation
-- British English in all output
+- Verification: real command output before claiming success
 - Breach protocol with stop phrase
+
+## Copilot language-specific instructions
+
+Copilot supports `applyTo` globs, so language rules only load when relevant:
+
+| File | Applies to | Key rules |
+|---|---|---|
+| `php.instructions.md` | `*.php` | CakePHP conventions, `assertSame()`, PSR-12, strict types |
+| `python.instructions.md` | `*.py` | Type hints, f-strings, pytest, pathlib |
+| `typescript.instructions.md` | `*.{ts,tsx}` | Strict TS, functional components, named exports |
 
 ## Updating
 

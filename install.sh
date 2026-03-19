@@ -40,8 +40,8 @@ echo "codex-safe wrapper installed."
 echo ""
 echo "--- GitHub Copilot ---"
 mkdir -p ~/.copilot/instructions
-cp "$SCRIPT_DIR/copilot/instructions/global-contract.instructions.md" ~/.copilot/instructions/
-echo "Copilot global instructions installed."
+cp "$SCRIPT_DIR"/copilot/instructions/*.instructions.md ~/.copilot/instructions/
+echo "Copilot global and language-specific instructions installed."
 
 # Ensure ~/.local/bin is on PATH
 if ! echo "$PATH" | grep -q "$HOME/.local/bin"; then
