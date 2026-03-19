@@ -67,6 +67,10 @@ safe_rm ~/.copilot/instructions/python.instructions.md
 safe_rm ~/.copilot/instructions/typescript.instructions.md
 echo "Copilot done."
 
+# Git
+safe_rm ~/.gitconfig-github
+echo "Git done (NOTE: ~/.gitconfig NOT removed — only the GitHub include file)."
+
 # Clean up manifest
 rm -f "$MANIFEST"
 

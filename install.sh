@@ -23,7 +23,7 @@ echo "NOTE: All existing config files will be overwritten (not merged)."
 # --- Backup existing config ---
 BACKUP_DIR="$HOME/.dotfiles-backup/$(date +%Y%m%d-%H%M%S)"
 BACKED_UP=false
-for f in ~/.claude/settings.json ~/.claude/CLAUDE.md ~/.codex/config.toml ~/.codex/AGENTS.md; do
+for f in ~/.claude/settings.json ~/.claude/CLAUDE.md ~/.codex/config.toml ~/.codex/AGENTS.md ~/.gitconfig ~/.gitconfig-github; do
   if [ -f "$f" ]; then
     if [ "$BACKED_UP" = false ]; then
       mkdir -p "$BACKUP_DIR"
@@ -74,6 +74,13 @@ echo "--- GitHub Copilot ---"
 mkdir -p ~/.copilot/instructions
 cp "$SCRIPT_DIR"/copilot/instructions/*.instructions.md ~/.copilot/instructions/
 echo "Copilot global and language-specific instructions installed."
+
+# --- Git config ---
+echo ""
+echo "--- Git ---"
+cp "$SCRIPT_DIR/gitconfig" ~/.gitconfig
+cp "$SCRIPT_DIR/gitconfig-github" ~/.gitconfig-github
+echo "Git config installed (Cardiff email default, GitHub noreply for github.com remotes)."
 
 # Ensure ~/.local/bin is on PATH
 if ! echo "$PATH" | grep -q "$HOME/.local/bin"; then
@@ -136,6 +143,15 @@ else
   FAIL=$((FAIL+1))
 fi
 
+# 6. Git conditional email
+if grep -q 'hasconfig:remote' ~/.gitconfig 2>/dev/null; then
+  echo "  [PASS] Git conditional include for GitHub noreply active"
+  PASS=$((PASS+1))
+else
+  echo "  [FAIL] Git conditional include missing"
+  FAIL=$((FAIL+1))
+fi
+
 echo ""
 echo "Results: $PASS passed, $FAIL failed"
 
@@ -157,7 +173,9 @@ for f in \
   ~/.copilot/instructions/global-contract.instructions.md \
   ~/.copilot/instructions/php.instructions.md \
   ~/.copilot/instructions/python.instructions.md \
-  ~/.copilot/instructions/typescript.instructions.md; do
+  ~/.copilot/instructions/typescript.instructions.md \
+  ~/.gitconfig \
+  ~/.gitconfig-github; do
   if [ -f "$f" ]; then
     shasum -a 256 "$f" >> "$MANIFEST"
   fi
