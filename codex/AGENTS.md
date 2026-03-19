@@ -27,6 +27,7 @@
 - Single source of truth — do not duplicate logic across layers.
 - Use framework-native patterns (CakePHP conventions, React hooks, FastAPI dependency injection) over hand-rolled implementations.
 - Check official documentation before framework-specific implementation. Use the latest recommended approach.
+- Verify any API/method exists in the project's framework/library version before using it. Do not assume features from newer or older versions.
 
 ## Dependencies
 - Do not add new dependencies without explicit approval.
@@ -53,7 +54,7 @@
 - Enforcement phrase: "Hard gate: options only first."
 
 ## Verification
-- Run the actual test/lint/type-check command before claiming success.
+- Definition of Done: tests + lint + type-check + static analysis must all pass before claiming success. If any fail, report the exact blocker.
 - Do not report passing status without evidence from real command output.
 - Improve coverage only through real behavioural tests — do not alter include/exclude scope to inflate numbers.
 - Prefer adding tests in existing files unless user explicitly approves new files.
@@ -89,6 +90,7 @@ Before marking any task as done, verify:
 - No commented-out code added — either keep code or delete it.
 - Change actually addresses the original request (not a tangent or over-engineered).
 - If a public API signature changed, confirm with user whether backward compatibility is required.
+- For database/schema changes: confirm migration is reversible, state rollback plan, and flag data-loss risk before applying.
 
 ## Breach protocol
 - If any rule is breached: stop immediately, acknowledge plainly, and re-offer options only.
