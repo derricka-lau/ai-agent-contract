@@ -1,4 +1,6 @@
 {
+  "language": "british english",
+  "alwaysThinkingEnabled": true,
   "permissions": {
     "deny": [
       "Read(**/.env)",
@@ -8,7 +10,10 @@
       "Edit(**/.env)",
       "Edit(**/.env.*)",
       "Edit(**/settings.local.php)",
-      "Edit(**/app.local.php)"
+      "Edit(**/app.local.php)",
+      "Bash(cat *.env*)",
+      "Bash(cat *settings.local.php*)",
+      "Bash(cat *app.local.php*)"
     ]
   }
 }
