@@ -104,7 +104,11 @@ Every devcontainer will automatically clone this repo and run `install.sh` on cr
 | **Codex CLI** | `codex-safe` wrapper blocks `--profile` overrides | Yes — shell gate | `codex-safe --profile foo --help` (should exit 64) |
 | **Copilot** | Instructions in `.instructions.md` | No — LLM guidance only | `ls ~/.copilot/instructions/` |
 
-Blocked files: `.env`, `.env.*`, `settings.local.php`, `app.local.php`
+Blocked files:
+- Environment: `.env`, `.env.*`, `.envrc`
+- App config: `settings.local.php`, `app.local.php`
+- Keys/certs: `*.pem`, `*.key`, `id_rsa`, `id_ed25519`
+- Credentials: `.npmrc`, `.pypirc`, `.netrc`, `~/.aws/credentials`, `~/.azure/*`
 
 ## Verification
 
