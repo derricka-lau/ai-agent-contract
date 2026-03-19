@@ -41,6 +41,8 @@ dotfiles/
 
 ### New laptop
 
+> **Warning:** `install.sh` backs up existing config to `~/.dotfiles-backup/` before overwriting. Existing `~/.claude/settings.json`, `~/.codex/config.toml`, etc. will be replaced.
+
 ```bash
 # SSH (if GitHub SSH key is already configured)
 git clone git@github.com:derricka-lau/dotfiles.git ~/dotfiles
