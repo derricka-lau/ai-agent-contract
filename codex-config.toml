@@ -1,0 +1,19 @@
+model = "gpt-5.3-codex"
+model_reasoning_effort = "medium"
+default_permissions = "global_lockdown"
+
+# Global default profile for hardened local runs.
+profile = "secure-global"
+
+[projects."/Users/forkalau/Desktop/pj/profiles"]
+trust_level = "trusted"
+
+[notice.model_migrations]
+"gpt-5.3-codex" = "gpt-5.4"
+
+[profiles.secure-global]
+permissions_profile = "global_lockdown"
+
+[permissions.global_lockdown.filesystem]
+# Keep normal project access while explicitly denying sensitive local config/secrets.
+":project_roots" = { "." = "write", ".env" = "none", ".env.local" = "none", ".env.development" = "none", ".env.production" = "none", ".env.test" = "none", "settings.local.php" = "none", "app.local.php" = "none", "**/.env" = "none", "**/.env.*" = "none", "**/.env.local" = "none", "**/settings.local.php" = "none", "**/app.local.php" = "none" }

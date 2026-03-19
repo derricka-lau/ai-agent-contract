@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Hard gate: disallow overriding profile from CLI.
+for arg in "$@"; do
+  if [[ "$arg" == "--profile" || "$arg" == "-p" || "$arg" == --profile=* ]]; then
+    echo "codex-safe: overriding profile is blocked; secure-global is enforced." >&2
+    exit 64
+  fi
+done
+
+exec codex --profile secure-global "$@"
