@@ -19,6 +19,7 @@ dotfiles/
 ├── claude/
 │   ├── settings.json              # Deny rules (deterministic, runtime-enforced)
 │   ├── CLAUDE.md                  # Global contract + common commands
+│   ├── managed-settings.json      # System-level: disables --dangerously-skip-permissions
 │   ├── MEMORY.md                  # Memory index
 │   └── memory/
 │       └── user_role.md           # User context
@@ -61,7 +62,8 @@ cd ~/dotfiles
 2. **Overwrite** existing config files (not merge) — this is intentional for reproducibility
 3. Install CLIs if missing
 4. Configure git with conditional email (GitHub noreply / GitLab Cardiff)
-5. Run 6 verification checks and report results
+5. Optionally install system-level managed settings (requires sudo on macOS)
+6. Run 7 verification checks and report results
 
 ### VSCode devcontainers (automatic)
 
@@ -88,6 +90,7 @@ Every devcontainer will automatically clone this repo and run `install.sh` on cr
 | Step | Target | Overwrite policy |
 |---|---|---|
 | Copy Claude Code settings + instructions + memory | `~/.claude/` | Full overwrite |
+| Install Claude Code managed settings (optional, requires sudo) | `/Library/Application Support/ClaudeCode/` | Full overwrite |
 | Install Claude Code CLI (if missing) | npm global | Skip if present |
 | Copy Codex config + AGENTS.md | `~/.codex/` | Full overwrite |
 | Install `codex-safe` wrapper | `~/.local/bin/` | Full overwrite |
@@ -100,6 +103,7 @@ Every devcontainer will automatically clone this repo and run `install.sh` on cr
 | Tool | Mechanism | Deterministic? | How to verify |
 |---|---|---|---|
 | **Claude Code** | `permissions.deny` in settings.json | Yes — CLI runtime gate | `grep "Read.*env" ~/.claude/settings.json` |
+| **Claude Code** | `disableBypassPermissionsMode` in managed-settings.json | Yes — system-level gate (requires sudo) | `cat "/Library/Application Support/ClaudeCode/managed-settings.json"` |
 | **Codex CLI** | `default_permissions = "global_lockdown"` + `filesystem "none"` in config.toml | Yes — sandbox gate | `grep "global_lockdown" ~/.codex/config.toml` |
 | **Codex CLI** | `codex-safe` wrapper blocks `--profile` overrides | Yes — shell gate | `codex-safe --profile foo --help` (should exit 64) |
 | **Copilot** | Instructions in `.instructions.md` | No — LLM guidance only | `ls ~/.copilot/instructions/` |
@@ -124,6 +128,7 @@ Blocked files:
 | codex-safe blocks override | `codex-safe --profile foo` exits with code 64 |
 | Copilot instructions | `global-contract.instructions.md` exists in `~/.copilot/instructions/` |
 | Git conditional email | `hasconfig:remote` present in `~/.gitconfig` |
+| Claude Code bypass disabled (optional) | `disableBypassPermissionsMode` in managed-settings.json |
 
 Re-run verification at any time: `./install.sh` (idempotent — safe to re-run).
 
@@ -142,11 +147,14 @@ No per-repo config needed. Works for any new repo automatically.
 
 - Common commands for test, lint, type-check across PHP, Python, TS
 - Strict types, concrete assertion examples, framework-native patterns
-- SOLID / Clean Architecture, dependency direction
+- SOLID / Clean Architecture, dependency direction, version-compatibility checks
+- Dependency management: lock-file imports, pinned versions, audit on changes
 - Git discipline: no force-push, imperative commit messages
 - Concise output: no trailing summaries, no unnecessary docstrings
 - Decision gate: 3 options with trade-offs before implementation
-- Verification: real command output before claiming success
+- Definition of Done: tests + lint + type-check + static analysis must all pass
+- Security code patterns: parameterised queries, deny-by-default auth, input validation, XSS prevention, no swallowed exceptions
+- Pre-completion checks: no debug statements, no secrets in diff, no commented-out code, DB migration rollback plan
 - Breach protocol with stop phrase
 
 ## Copilot language-specific instructions

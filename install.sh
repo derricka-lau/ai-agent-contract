@@ -47,6 +47,21 @@ cp "$SCRIPT_DIR/claude/MEMORY.md" ~/.claude/MEMORY.md
 cp "$SCRIPT_DIR/claude/memory/user_role.md" ~/.claude/memory/user_role.md
 echo "Claude Code settings, instructions, and memory installed."
 
+# Managed settings (system-level, disables --dangerously-skip-permissions)
+MANAGED_DIR="/Library/Application Support/ClaudeCode"
+MANAGED_FILE="$MANAGED_DIR/managed-settings.json"
+if [ "$(uname)" = "Darwin" ]; then
+  if [ -w "$MANAGED_DIR" ] 2>/dev/null || [ -w "$(dirname "$MANAGED_DIR")" ]; then
+    mkdir -p "$MANAGED_DIR"
+    cp "$SCRIPT_DIR/claude/managed-settings.json" "$MANAGED_FILE"
+    echo "Claude Code managed settings installed (bypass permissions disabled)."
+  else
+    echo "NOTE: Installing managed settings requires sudo."
+    echo "  Run: sudo mkdir -p \"$MANAGED_DIR\" && sudo cp \"$SCRIPT_DIR/claude/managed-settings.json\" \"$MANAGED_FILE\""
+    echo "  This disables --dangerously-skip-permissions at the system level."
+  fi
+fi
+
 if ! command -v claude &> /dev/null; then
   echo "Installing Claude Code CLI..."
   npm install -g @anthropic-ai/claude-code
@@ -152,6 +167,14 @@ else
   FAIL=$((FAIL+1))
 fi
 
+# 7. Claude Code managed settings (bypass disabled)
+if [ -f "/Library/Application Support/ClaudeCode/managed-settings.json" ] && grep -q 'disableBypassPermissionsMode' "/Library/Application Support/ClaudeCode/managed-settings.json" 2>/dev/null; then
+  echo "  [PASS] Claude Code bypass permissions disabled (managed settings)"
+  PASS=$((PASS+1))
+else
+  echo "  [WARN] Claude Code managed settings not installed (optional — requires sudo)"
+fi
+
 echo ""
 echo "Results: $PASS passed, $FAIL failed"
 
@@ -175,7 +198,8 @@ for f in \
   ~/.copilot/instructions/python.instructions.md \
   ~/.copilot/instructions/typescript.instructions.md \
   ~/.gitconfig \
-  ~/.gitconfig-github; do
+  ~/.gitconfig-github \
+  "/Library/Application Support/ClaudeCode/managed-settings.json"; do
   if [ -f "$f" ]; then
     shasum -a 256 "$f" >> "$MANIFEST"
   fi

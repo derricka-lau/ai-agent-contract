@@ -17,6 +17,7 @@ applyTo: "**"
 - Single source of truth — do not duplicate logic across layers.
 - Use framework-native patterns over hand-rolled implementations.
 - Check official documentation before framework-specific implementation.
+- Verify any API/method exists in the project's framework/library version before using it.
 
 ## Dependencies
 - Do not add new dependencies without explicit approval.
@@ -40,7 +41,7 @@ applyTo: "**"
 - Do not implement until user explicitly selects an option.
 
 ## Verification
-- Run the actual test/lint/type-check command before claiming success.
+- Definition of Done: tests + lint + type-check + static analysis must all pass before claiming success. If any fail, report the exact blocker.
 - Do not report passing status without evidence from real command output.
 - Improve coverage only through real behavioural tests — do not alter include/exclude scope to inflate numbers.
 - Prefer adding tests in existing files unless user explicitly approves new files.
@@ -71,6 +72,7 @@ Before marking any task as done, verify:
 - No commented-out code added — either keep code or delete it.
 - Change actually addresses the original request.
 - If a public API signature changed, confirm whether backward compatibility is required.
+- For database/schema changes: confirm migration is reversible, state rollback plan, and flag data-loss risk.
 
 ## Security — sensitive files
 - NEVER read, display, suggest edits to, or include content from these files:
