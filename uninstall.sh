@@ -77,6 +77,10 @@ rm -f "$MANIFEST"
 echo ""
 echo "=== Done. ==="
 echo "NOTE: Claude Code CLI (npm package) was NOT removed. Run 'npm uninstall -g @anthropic-ai/claude-code' to remove it."
+if [ -f "/Library/Application Support/ClaudeCode/managed-settings.json" ]; then
+  echo "NOTE: System-level managed settings not removed (requires sudo). Run:"
+  echo "  sudo rm \"/Library/Application Support/ClaudeCode/managed-settings.json\""
+fi
 if [ -n "$LATEST_BACKUP" ]; then
   echo "NOTE: Backups still at $LATEST_BACKUP — delete manually when no longer needed."
 fi
