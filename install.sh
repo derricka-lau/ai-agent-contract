@@ -1,11 +1,19 @@
 #!/bin/bash
+set -euo pipefail
 
-SCRIPT_DIR="$(dirname "$0")"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+echo "=== Installing dotfiles ==="
 
 # --- Claude Code ---
-mkdir -p ~/.claude
-cp "$SCRIPT_DIR/claude-settings.json" ~/.claude/settings.json
-echo "Claude Code settings installed."
+echo ""
+echo "--- Claude Code ---"
+mkdir -p ~/.claude/memory
+cp "$SCRIPT_DIR/claude/settings.json" ~/.claude/settings.json
+cp "$SCRIPT_DIR/claude/CLAUDE.md" ~/.claude/CLAUDE.md
+cp "$SCRIPT_DIR/claude/MEMORY.md" ~/.claude/MEMORY.md
+cp "$SCRIPT_DIR/claude/memory/user_role.md" ~/.claude/memory/user_role.md
+echo "Claude Code settings, instructions, and memory installed."
 
 if ! command -v claude &> /dev/null; then
   echo "Installing Claude Code CLI..."
@@ -16,17 +24,25 @@ else
 fi
 
 # --- Codex CLI ---
+echo ""
+echo "--- Codex CLI ---"
 mkdir -p ~/.codex
-cp "$SCRIPT_DIR/codex-config.toml" ~/.codex/config.toml
-echo "Codex config installed."
+cp "$SCRIPT_DIR/codex/config.toml" ~/.codex/config.toml
+cp "$SCRIPT_DIR/codex/AGENTS.md" ~/.codex/AGENTS.md
+echo "Codex config and instructions installed."
 
 mkdir -p ~/.local/bin
 cp "$SCRIPT_DIR/codex-safe" ~/.local/bin/codex-safe
 chmod +x ~/.local/bin/codex-safe
-echo "codex-safe wrapper installed to ~/.local/bin/codex-safe"
+echo "codex-safe wrapper installed."
 
 # Ensure ~/.local/bin is on PATH
 if ! echo "$PATH" | grep -q "$HOME/.local/bin"; then
-  echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
-  echo "Added ~/.local/bin to PATH in ~/.bashrc"
+  SHELL_RC="$HOME/.bashrc"
+  [ -f "$HOME/.zshrc" ] && SHELL_RC="$HOME/.zshrc"
+  echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$SHELL_RC"
+  echo "Added ~/.local/bin to PATH in $SHELL_RC"
 fi
+
+echo ""
+echo "=== Done. Both Claude Code and Codex CLI are configured. ==="
