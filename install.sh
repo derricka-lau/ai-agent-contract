@@ -23,7 +23,7 @@ echo "NOTE: All existing config files will be overwritten (not merged)."
 # --- Backup existing config ---
 BACKUP_DIR="$HOME/.dotfiles-backup/$(date +%Y%m%d-%H%M%S)"
 BACKED_UP=false
-for f in ~/.claude/settings.json ~/.claude/CLAUDE.md ~/.claude/skills/*/SKILL.md ~/.agents/skills/*/SKILL.md ~/.copilot/copilot-instructions.md ~/.copilot/skills/*/SKILL.md ~/.codex/config.toml ~/.codex/AGENTS.md ~/.gitconfig ~/.gitconfig-github; do
+for f in ~/.claude/settings.json ~/.claude/CLAUDE.md ~/.claude/skills/*/SKILL.md ~/.agents/skills/*/SKILL.md ~/.copilot/instructions/*.instructions.md ~/.copilot/copilot-instructions.md ~/.copilot/skills/*/SKILL.md ~/.codex/config.toml ~/.codex/AGENTS.md ~/.gitconfig ~/.gitconfig-github; do
   if [ -f "$f" ]; then
     if [ "$BACKED_UP" = false ]; then
       mkdir -p "$BACKUP_DIR"
@@ -93,10 +93,14 @@ else
   echo "Codex CLI installed."
 fi
 
-# --- GitHub Copilot CLI ---
+# --- GitHub Copilot (VS Code extension + CLI) ---
 echo ""
-echo "--- Copilot CLI ---"
-mkdir -p ~/.copilot
+echo "--- GitHub Copilot ---"
+# VS Code extension instructions
+mkdir -p ~/.copilot/instructions
+cp "$SCRIPT_DIR"/copilot/instructions/*.instructions.md ~/.copilot/instructions/
+echo "Copilot VS Code extension instructions installed."
+# CLI global instructions
 cp "$SCRIPT_DIR/copilot/copilot-instructions.md" ~/.copilot/copilot-instructions.md
 echo "Copilot CLI global instructions installed."
 
@@ -196,12 +200,12 @@ else
   FAIL=$((FAIL+1))
 fi
 
-# 5. Copilot CLI instructions present
-if [ -f ~/.copilot/copilot-instructions.md ]; then
-  echo "  [PASS] Copilot CLI global instructions present"
+# 5. Copilot instructions present (VS Code extension + CLI)
+if [ -f ~/.copilot/instructions/global-contract.instructions.md ] && [ -f ~/.copilot/copilot-instructions.md ]; then
+  echo "  [PASS] Copilot instructions present (extension + CLI)"
   PASS=$((PASS+1))
 else
-  echo "  [FAIL] Copilot CLI global instructions missing"
+  echo "  [FAIL] Copilot instructions missing"
   FAIL=$((FAIL+1))
 fi
 
@@ -253,6 +257,7 @@ for f in \
   ~/.codex/AGENTS.md \
   ~/.local/bin/codex-safe \
   ~/.copilot/copilot-instructions.md \
+  ~/.copilot/instructions/global-contract.instructions.md \
   ~/.gitconfig \
   ~/.gitconfig-github \
   "/Library/Application Support/ClaudeCode/managed-settings.json"; do
