@@ -52,17 +52,24 @@ safe_rm ~/.claude/settings.json
 safe_rm ~/.claude/CLAUDE.md
 safe_rm ~/.claude/MEMORY.md
 safe_rm ~/.claude/memory/user_role.md
+safe_rm ~/.claude/prompts/workflow.md
 echo "Claude Code done."
 
 # Codex CLI
 safe_rm ~/.codex/config.toml
 safe_rm ~/.codex/AGENTS.md
+safe_rm ~/.codex/MEMORY.md
+safe_rm ~/.codex/memory/user_role.md
+safe_rm ~/.codex/prompts/workflow.md
 safe_rm ~/.local/bin/codex-safe
 echo "Codex done."
 
 # Copilot (extension + CLI)
 safe_rm ~/.copilot/instructions/global-contract.instructions.md
 safe_rm ~/.copilot/copilot-instructions.md
+safe_rm ~/.copilot/MEMORY.md
+safe_rm ~/.copilot/memory/user_role.md
+safe_rm ~/.copilot/prompts/workflow.md
 echo "Copilot done."
 
 # Skills (all three tools)

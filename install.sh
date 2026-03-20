@@ -23,7 +23,27 @@ echo "NOTE: All existing config files will be overwritten (not merged)."
 # --- Backup existing config ---
 BACKUP_DIR="$HOME/.dotfiles-backup/$(date +%Y%m%d-%H%M%S)"
 BACKED_UP=false
-for f in ~/.claude/settings.json ~/.claude/CLAUDE.md ~/.claude/skills/*/SKILL.md ~/.agents/skills/*/SKILL.md ~/.copilot/instructions/*.instructions.md ~/.copilot/copilot-instructions.md ~/.copilot/skills/*/SKILL.md ~/.codex/config.toml ~/.codex/AGENTS.md ~/.gitconfig ~/.gitconfig-github; do
+for f in \
+  ~/.claude/settings.json \
+  ~/.claude/CLAUDE.md \
+  ~/.claude/MEMORY.md \
+  ~/.claude/memory/user_role.md \
+  ~/.claude/prompts/workflow.md \
+  ~/.codex/config.toml \
+  ~/.codex/AGENTS.md \
+  ~/.codex/MEMORY.md \
+  ~/.codex/memory/user_role.md \
+  ~/.codex/prompts/workflow.md \
+  ~/.copilot/instructions/*.instructions.md \
+  ~/.copilot/copilot-instructions.md \
+  ~/.copilot/MEMORY.md \
+  ~/.copilot/memory/user_role.md \
+  ~/.copilot/prompts/workflow.md \
+  ~/.claude/skills/*/SKILL.md \
+  ~/.agents/skills/*/SKILL.md \
+  ~/.copilot/skills/*/SKILL.md \
+  ~/.gitconfig \
+  ~/.gitconfig-github; do
   if [ -f "$f" ]; then
     if [ "$BACKED_UP" = false ]; then
       mkdir -p "$BACKUP_DIR"
@@ -40,11 +60,12 @@ fi
 # --- Claude Code ---
 echo ""
 echo "--- Claude Code ---"
-mkdir -p ~/.claude/memory
+mkdir -p ~/.claude/memory ~/.claude/prompts
 cp "$SCRIPT_DIR/claude/settings.json" ~/.claude/settings.json
 cp "$SCRIPT_DIR/claude/CLAUDE.md" ~/.claude/CLAUDE.md
 cp "$SCRIPT_DIR/claude/MEMORY.md" ~/.claude/MEMORY.md
 cp "$SCRIPT_DIR/claude/memory/user_role.md" ~/.claude/memory/user_role.md
+cp "$SCRIPT_DIR/prompts/workflow.md" ~/.claude/prompts/workflow.md
 echo "Claude Code settings, instructions, and memory installed."
 
 # Skills are installed per-tool after all tool sections (see below)
@@ -75,10 +96,13 @@ fi
 # --- Codex CLI ---
 echo ""
 echo "--- Codex CLI ---"
-mkdir -p ~/.codex
+mkdir -p ~/.codex/memory ~/.codex/prompts
 cp "$SCRIPT_DIR/codex/config.toml" ~/.codex/config.toml
 cp "$SCRIPT_DIR/codex/AGENTS.md" ~/.codex/AGENTS.md
-echo "Codex config and instructions installed."
+cp "$SCRIPT_DIR/codex/MEMORY.md" ~/.codex/MEMORY.md
+cp "$SCRIPT_DIR/codex/memory/user_role.md" ~/.codex/memory/user_role.md
+cp "$SCRIPT_DIR/prompts/workflow.md" ~/.codex/prompts/workflow.md
+echo "Codex config, instructions, memory, and workflow prompts installed."
 
 mkdir -p ~/.local/bin
 cp "$SCRIPT_DIR/codex-safe" ~/.local/bin/codex-safe
@@ -97,12 +121,15 @@ fi
 echo ""
 echo "--- GitHub Copilot ---"
 # VS Code extension instructions
-mkdir -p ~/.copilot/instructions
+mkdir -p ~/.copilot/instructions ~/.copilot/memory ~/.copilot/prompts
 cp "$SCRIPT_DIR"/copilot/instructions/*.instructions.md ~/.copilot/instructions/
 echo "Copilot VS Code extension instructions installed."
 # CLI global instructions
 cp "$SCRIPT_DIR/copilot/copilot-instructions.md" ~/.copilot/copilot-instructions.md
-echo "Copilot CLI global instructions installed."
+cp "$SCRIPT_DIR/copilot/MEMORY.md" ~/.copilot/MEMORY.md
+cp "$SCRIPT_DIR/copilot/memory/user_role.md" ~/.copilot/memory/user_role.md
+cp "$SCRIPT_DIR/prompts/workflow.md" ~/.copilot/prompts/workflow.md
+echo "Copilot CLI global instructions, memory, and workflow prompts installed."
 
 if npm list -g @github/copilot &> /dev/null; then
   echo "Copilot CLI already installed."
@@ -209,7 +236,18 @@ else
   FAIL=$((FAIL+1))
 fi
 
-# 6. Git conditional email
+# 6. Shared memory and workflow prompts installed (all three tools)
+if [ -f ~/.claude/MEMORY.md ] && [ -f ~/.claude/memory/user_role.md ] && [ -f ~/.claude/prompts/workflow.md ] && \
+   [ -f ~/.codex/MEMORY.md ] && [ -f ~/.codex/memory/user_role.md ] && [ -f ~/.codex/prompts/workflow.md ] && \
+   [ -f ~/.copilot/MEMORY.md ] && [ -f ~/.copilot/memory/user_role.md ] && [ -f ~/.copilot/prompts/workflow.md ]; then
+  echo "  [PASS] Shared memory and workflow prompts installed (Claude, Codex, Copilot)"
+  PASS=$((PASS+1))
+else
+  echo "  [FAIL] Shared memory/workflow prompts missing for one or more tools"
+  FAIL=$((FAIL+1))
+fi
+
+# 7. Git conditional email
 if grep -q 'hasconfig:remote' ~/.gitconfig 2>/dev/null; then
   echo "  [PASS] Git conditional include for GitHub noreply active"
   PASS=$((PASS+1))
@@ -218,7 +256,7 @@ else
   FAIL=$((FAIL+1))
 fi
 
-# 7. Skills installed across all three tools
+# 8. Skills installed across all three tools
 CLAUDE_SKILLS=$(ls -1d ~/.claude/skills/*/SKILL.md 2>/dev/null | wc -l | tr -d ' ')
 CODEX_SKILLS=$(ls -1d ~/.agents/skills/*/SKILL.md 2>/dev/null | wc -l | tr -d ' ')
 COPILOT_SKILLS=$(ls -1d ~/.copilot/skills/*/SKILL.md 2>/dev/null | wc -l | tr -d ' ')
@@ -230,7 +268,7 @@ else
   FAIL=$((FAIL+1))
 fi
 
-# 8. Claude Code managed settings (bypass disabled)
+# 9. Claude Code managed settings (bypass disabled)
 if [ -f "/Library/Application Support/ClaudeCode/managed-settings.json" ] && grep -q 'disableBypassPermissionsMode' "/Library/Application Support/ClaudeCode/managed-settings.json" 2>/dev/null; then
   echo "  [PASS] Claude Code bypass permissions disabled (managed settings)"
   PASS=$((PASS+1))
@@ -253,11 +291,18 @@ for f in \
   ~/.claude/CLAUDE.md \
   ~/.claude/MEMORY.md \
   ~/.claude/memory/user_role.md \
+  ~/.claude/prompts/workflow.md \
   ~/.codex/config.toml \
   ~/.codex/AGENTS.md \
+  ~/.codex/MEMORY.md \
+  ~/.codex/memory/user_role.md \
+  ~/.codex/prompts/workflow.md \
   ~/.local/bin/codex-safe \
   ~/.copilot/copilot-instructions.md \
   ~/.copilot/instructions/global-contract.instructions.md \
+  ~/.copilot/MEMORY.md \
+  ~/.copilot/memory/user_role.md \
+  ~/.copilot/prompts/workflow.md \
   ~/.gitconfig \
   ~/.gitconfig-github \
   "/Library/Application Support/ClaudeCode/managed-settings.json"; do
