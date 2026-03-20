@@ -125,8 +125,13 @@ echo "Git config installed (Cardiff email default, GitHub noreply for github.com
 
 # Ensure ~/.local/bin is on PATH
 if ! echo "$PATH" | grep -q "$HOME/.local/bin"; then
-  SHELL_RC="$HOME/.bashrc"
-  [ -f "$HOME/.zshrc" ] && SHELL_RC="$HOME/.zshrc"
+  # Detect the user's actual shell, not just which rc file exists
+  case "$SHELL" in
+    */zsh)  SHELL_RC="$HOME/.zshrc" ;;
+    */bash) SHELL_RC="$HOME/.bashrc" ;;
+    *)      SHELL_RC="$HOME/.profile" ;;
+  esac
+  touch "$SHELL_RC"
   echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$SHELL_RC"
   echo "Added ~/.local/bin to PATH in $SHELL_RC"
 fi
