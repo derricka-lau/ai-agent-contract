@@ -27,7 +27,9 @@ dotfiles/
 │   ├── config.toml                # Deny rules (deterministic, filesystem "none")
 │   └── AGENTS.md                  # Global contract + common commands
 ├── copilot/
-│   └── copilot-instructions.md    # Global contract + common commands
+│   ├── copilot-instructions.md    # CLI: global contract + common commands
+│   └── instructions/
+│       └── global-contract.instructions.md  # VS Code extension (applyTo: "**")
 ├── skills/                        # Shared skills (deployed to all three tools)
 │   ├── web-search-rag-deep/       # Exhaustive multi-pass web search (5-10+ searches)
 │   ├── web-search-rag-quick/      # Fast lean web search (1-3 searches)
@@ -77,6 +79,14 @@ Add to your **host machine's** VSCode user settings:
 "dotfiles.targetPath": "~/dotfiles"
 ```
 
+Also ensure Copilot picks up the global instructions (host-side setting):
+
+```json
+"chat.instructionsFilesLocations": {
+  "~/.copilot/instructions": true
+}
+```
+
 Every devcontainer will automatically clone this repo and run `install.sh` on creation.
 
 ## What gets installed where
@@ -89,6 +99,7 @@ Every devcontainer will automatically clone this repo and run `install.sh` on cr
 | Codex config + AGENTS.md | `~/.codex/` | Full overwrite |
 | Codex CLI (if missing) | `npm install -g @openai/codex` | Skip if present |
 | `codex-safe` wrapper | `~/.local/bin/` | Full overwrite |
+| Copilot VS Code extension instructions | `~/.copilot/instructions/` | Full overwrite |
 | Copilot CLI global instructions | `~/.copilot/copilot-instructions.md` | Full overwrite |
 | Copilot CLI (if missing) | `npm install -g @github/copilot` | Skip if present |
 | Skills (all three tools) | `~/.claude/skills/`, `~/.agents/skills/`, `~/.copilot/skills/` | Full overwrite |
@@ -103,7 +114,7 @@ Every devcontainer will automatically clone this repo and run `install.sh` on cr
 | **Claude Code** | `disableBypassPermissionsMode` in managed-settings.json | Yes — system-level gate (requires sudo) | `cat "/Library/Application Support/ClaudeCode/managed-settings.json"` |
 | **Codex CLI** | `default_permissions = "global_lockdown"` + `filesystem "none"` in config.toml | Yes — sandbox gate | `grep "global_lockdown" ~/.codex/config.toml` |
 | **Codex CLI** | `codex-safe` wrapper blocks `--profile` overrides | Yes — shell gate | `codex-safe --profile foo --help` (should exit 64) |
-| **Copilot CLI** | Instructions in `copilot-instructions.md` | No — LLM guidance only | `cat ~/.copilot/copilot-instructions.md` |
+| **Copilot** | Instructions in `.instructions.md` (extension) + `copilot-instructions.md` (CLI) | No — LLM guidance only | `ls ~/.copilot/instructions/ ~/.copilot/copilot-instructions.md` |
 
 Blocked files:
 - Environment: `.env`, `.env.*`, `.envrc`
@@ -121,7 +132,7 @@ Blocked files:
 | 2 | Codex global_lockdown profile | `default_permissions = "global_lockdown"` in `~/.codex/config.toml` |
 | 3 | codex-safe wrapper | Executable at `~/.local/bin/codex-safe` |
 | 4 | codex-safe blocks override | `codex-safe --profile foo` exits 64 |
-| 5 | Copilot CLI instructions | `copilot-instructions.md` exists in `~/.copilot/` |
+| 5 | Copilot instructions | Extension + CLI instructions both present in `~/.copilot/` |
 | 6 | Git conditional email | `hasconfig:remote` in `~/.gitconfig` |
 | 7 | Skills (all tools) | 7 skills in each of `~/.claude/skills/`, `~/.agents/skills/`, `~/.copilot/skills/` |
 | 8 | Claude managed settings (optional) | `disableBypassPermissionsMode` in managed-settings.json |

@@ -60,7 +60,8 @@ safe_rm ~/.codex/AGENTS.md
 safe_rm ~/.local/bin/codex-safe
 echo "Codex done."
 
-# Copilot CLI
+# Copilot (extension + CLI)
+safe_rm ~/.copilot/instructions/global-contract.instructions.md
 safe_rm ~/.copilot/copilot-instructions.md
 echo "Copilot done."
 
