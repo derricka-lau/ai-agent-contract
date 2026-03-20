@@ -64,12 +64,12 @@ if [ "$(uname)" = "Darwin" ]; then
   fi
 fi
 
-if ! command -v claude &> /dev/null; then
+if npm list -g @anthropic-ai/claude-code &> /dev/null; then
+  echo "Claude Code CLI already installed."
+else
   echo "Installing Claude Code CLI..."
   npm install -g @anthropic-ai/claude-code
   echo "Claude Code CLI installed."
-else
-  echo "Claude Code CLI already installed."
 fi
 
 # --- Codex CLI ---
@@ -85,12 +85,12 @@ cp "$SCRIPT_DIR/codex-safe" ~/.local/bin/codex-safe
 chmod +x ~/.local/bin/codex-safe
 echo "codex-safe wrapper installed."
 
-if ! command -v codex &> /dev/null; then
-  echo "Installing Codex CLI via npm..."
+if npm list -g @openai/codex &> /dev/null; then
+  echo "Codex CLI already installed."
+else
+  echo "Installing Codex CLI..."
   npm install -g @openai/codex
   echo "Codex CLI installed."
-else
-  echo "Codex CLI already installed."
 fi
 
 # --- GitHub Copilot CLI ---
@@ -100,12 +100,12 @@ mkdir -p ~/.copilot
 cp "$SCRIPT_DIR/copilot/copilot-instructions.md" ~/.copilot/copilot-instructions.md
 echo "Copilot CLI global instructions installed."
 
-if ! command -v copilot &> /dev/null; then
+if npm list -g @github/copilot &> /dev/null; then
+  echo "Copilot CLI already installed."
+else
   echo "Installing Copilot CLI..."
   npm install -g @github/copilot
   echo "Copilot CLI installed. Run 'copilot' then '/login' to authenticate."
-else
-  echo "Copilot CLI already installed."
 fi
 
 # --- Skills (shared across all three tools) ---
