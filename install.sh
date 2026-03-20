@@ -85,12 +85,33 @@ cp "$SCRIPT_DIR/codex-safe" ~/.local/bin/codex-safe
 chmod +x ~/.local/bin/codex-safe
 echo "codex-safe wrapper installed."
 
+if ! command -v codex &> /dev/null; then
+  echo "Installing Codex CLI via npm..."
+  npm install -g @openai/codex
+  echo "Codex CLI installed."
+else
+  echo "Codex CLI already installed."
+fi
+
 # --- GitHub Copilot CLI ---
 echo ""
 echo "--- Copilot CLI ---"
 mkdir -p ~/.copilot
 cp "$SCRIPT_DIR/copilot/copilot-instructions.md" ~/.copilot/copilot-instructions.md
 echo "Copilot CLI global instructions installed."
+
+if ! command -v copilot &> /dev/null; then
+  if command -v brew &> /dev/null; then
+    echo "Installing Copilot CLI via Homebrew..."
+    brew install github/copilot-cli/copilot
+  else
+    echo "Installing Copilot CLI via npm..."
+    npm install -g @github/copilot
+  fi
+  echo "Copilot CLI installed. Run 'copilot' then '/login' to authenticate."
+else
+  echo "Copilot CLI already installed."
+fi
 
 # --- Skills (shared across all three tools) ---
 echo ""
