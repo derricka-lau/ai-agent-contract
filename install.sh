@@ -101,13 +101,8 @@ cp "$SCRIPT_DIR/copilot/copilot-instructions.md" ~/.copilot/copilot-instructions
 echo "Copilot CLI global instructions installed."
 
 if ! command -v copilot &> /dev/null; then
-  if command -v brew &> /dev/null; then
-    echo "Installing Copilot CLI via Homebrew..."
-    brew install github/copilot-cli/copilot
-  else
-    echo "Installing Copilot CLI via npm..."
-    npm install -g @github/copilot
-  fi
+  echo "Installing Copilot CLI..."
+  npm install -g @github/copilot
   echo "Copilot CLI installed. Run 'copilot' then '/login' to authenticate."
 else
   echo "Copilot CLI already installed."
