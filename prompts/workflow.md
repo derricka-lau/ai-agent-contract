@@ -61,7 +61,26 @@ If this task is simple enough for Codex to handle in one shot, say so and skip t
 Keep it concrete and opinionated.
 ```
 
-## 3. Copilot — long autonomous task
+## 3. Handoff — transfer context to another tool
+
+Use when Opus finishes planning and you need to hand off to Codex or Copilot.
+
+```
+Summarise this plan as a self-contained prompt I can paste into
+[Codex / Copilot]. Include all context needed — the recipient
+has no memory of this conversation.
+
+Include:
+- exact task description
+- relevant file paths
+- constraints and things not to change
+- acceptance criteria
+- verification commands to run
+
+Format it as a ready-to-paste prompt, not a summary.
+```
+
+## 4. Copilot — long autonomous task
 
 ```
 ## Task
@@ -109,7 +128,7 @@ Return:
 - remaining risks
 ```
 
-## 4. Codex — short focused task
+## 5. Codex — short focused task
 
 ```
 Make this focused change:
@@ -136,7 +155,7 @@ Return:
 - verification result
 ```
 
-## 5. Claude Code — review
+## 6. Claude Code — review
 
 ```
 Review the changes on this branch against [main / target branch].
@@ -160,7 +179,7 @@ Output:
 Be direct. Quote specific files and lines where possible.
 ```
 
-## 6. Copilot failed — send back to Claude
+## 7. Copilot failed — send back to Claude
 
 ```
 Copilot failed this task.
@@ -185,7 +204,8 @@ Your job:
 
 | Need | Tool |
 |------|------|
-| Plan, diagnose, review | Claude Code |
-| Long "keep going until done" | Copilot agent mode |
-| Short bounded edit | Codex CLI |
-| Copilot failed | Back to Claude Code (#6) |
+| Plan, diagnose, review | Claude Code (#2, #6) |
+| Hand off context | Claude Code (#3) |
+| Long "keep going until done" | Copilot agent mode (#4) |
+| Short bounded edit | Codex CLI (#5) |
+| Copilot failed | Back to Claude Code (#7) |
