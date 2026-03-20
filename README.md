@@ -2,7 +2,7 @@
 
 Personal dotfiles for bootstrapping AI coding agents on any machine — local or devcontainer.
 
-One `install.sh` configures Claude Code, Codex CLI, and GitHub Copilot with identical rules.
+One `install.sh` configures Claude Code, Codex CLI, and Copilot CLI with identical rules.
 
 ## Prerequisites
 
@@ -27,11 +27,17 @@ dotfiles/
 │   ├── config.toml                # Deny rules (deterministic, filesystem "none")
 │   └── AGENTS.md                  # Global contract + common commands
 ├── copilot/
-│   └── instructions/
-│       ├── global-contract.instructions.md   # Universal rules (applyTo: "**")
-│       ├── php.instructions.md               # PHP/CakePHP (applyTo: "*.php")
-│       ├── python.instructions.md            # Python (applyTo: "*.py")
-│       └── typescript.instructions.md        # TS/React (applyTo: "*.{ts,tsx}")
+│   └── copilot-instructions.md    # Global contract + common commands
+├── skills/                        # Shared skills (deployed to all three tools)
+│   ├── web-search-rag-deep/       # Exhaustive multi-pass web search (5-10+ searches)
+│   ├── web-search-rag-quick/      # Fast lean web search (1-3 searches)
+│   ├── web-search-rag-official-deep/   # Multi-pass targeting official sources
+│   ├── web-search-rag-official-quick/  # Fast targeting official sources
+│   ├── php-cakephp/               # PHP/CakePHP conventions
+│   ├── python/                    # Python conventions
+│   └── typescript-react/          # TypeScript/React conventions
+├── prompts/
+│   └── workflow.md                # Multi-tool workflow prompt templates
 ├── gitconfig                      # Global git config (Cardiff email default)
 ├── gitconfig-github               # Conditional include (GitHub noreply email)
 ├── codex-safe                     # Wrapper enforcing secure-global profile
@@ -44,30 +50,26 @@ dotfiles/
 
 ### New laptop
 
-> **Warning:** `install.sh` backs up existing config to `~/.dotfiles-backup/` before overwriting. Existing `~/.claude/settings.json`, `~/.codex/config.toml`, etc. will be replaced.
+> **Warning:** `install.sh` backs up existing config to `~/.dotfiles-backup/` before overwriting.
 
 ```bash
-# SSH (if GitHub SSH key is already configured)
 git clone git@github.com:derricka-lau/dotfiles.git ~/dotfiles
-
-# HTTPS fallback (works without SSH key setup)
-git clone https://github.com/derricka-lau/dotfiles.git ~/dotfiles
-
 cd ~/dotfiles
 ./install.sh
 ```
 
 `install.sh` will:
 1. Check prerequisites (git, node, npm)
-2. **Overwrite** existing config files (not merge) — this is intentional for reproducibility
+2. **Overwrite** existing config files (not merge) — intentional for reproducibility
 3. Install CLIs if missing
-4. Configure git with conditional email (GitHub noreply / GitLab Cardiff)
-5. Optionally install system-level managed settings (requires sudo on macOS)
-6. Run 7 verification checks and report results
+4. Deploy shared skills to all three tools
+5. Configure git with conditional email (GitHub noreply / GitLab Cardiff)
+6. Optionally install system-level managed settings (requires sudo on macOS)
+7. Run 8 verification checks and report results
 
 ### VSCode devcontainers (automatic)
 
-Add to your **host machine's** VSCode user settings (`Cmd+Shift+P` → "Preferences: Open User Settings (JSON)"). These must be on the **host**, not inside the container:
+Add to your **host machine's** VSCode user settings:
 
 ```json
 "dotfiles.repository": "derricka-lau/dotfiles",
@@ -75,27 +77,20 @@ Add to your **host machine's** VSCode user settings (`Cmd+Shift+P` → "Preferen
 "dotfiles.targetPath": "~/dotfiles"
 ```
 
-Also ensure Copilot picks up the global instructions (host-side setting):
-
-```json
-"chat.instructionsFilesLocations": {
-  "~/.copilot/instructions": true
-}
-```
-
 Every devcontainer will automatically clone this repo and run `install.sh` on creation.
 
-## What `install.sh` does
+## What gets installed where
 
 | Step | Target | Overwrite policy |
 |---|---|---|
-| Copy Claude Code settings + instructions + memory | `~/.claude/` | Full overwrite |
-| Install Claude Code managed settings (optional, requires sudo) | `/Library/Application Support/ClaudeCode/` | Full overwrite |
-| Install Claude Code CLI (if missing) | npm global | Skip if present |
-| Copy Codex config + AGENTS.md | `~/.codex/` | Full overwrite |
-| Install `codex-safe` wrapper | `~/.local/bin/` | Full overwrite |
-| Copy all Copilot instruction files | `~/.copilot/instructions/` | Full overwrite |
-| Copy git config + GitHub conditional include | `~/.gitconfig`, `~/.gitconfig-github` | Full overwrite |
+| Claude Code settings + instructions + memory | `~/.claude/` | Full overwrite |
+| Claude Code managed settings (optional, requires sudo) | `/Library/Application Support/ClaudeCode/` | Full overwrite |
+| Claude Code CLI (if missing) | npm global | Skip if present |
+| Codex config + AGENTS.md | `~/.codex/` | Full overwrite |
+| `codex-safe` wrapper | `~/.local/bin/` | Full overwrite |
+| Copilot CLI global instructions | `~/.copilot/copilot-instructions.md` | Full overwrite |
+| Skills (all three tools) | `~/.claude/skills/`, `~/.agents/skills/`, `~/.copilot/skills/` | Full overwrite |
+| Git config + GitHub conditional include | `~/.gitconfig`, `~/.gitconfig-github` | Full overwrite |
 | Add `~/.local/bin` to PATH | `~/.zshrc` or `~/.bashrc` | Append if missing |
 
 ## Sensitive file protection
@@ -106,7 +101,7 @@ Every devcontainer will automatically clone this repo and run `install.sh` on cr
 | **Claude Code** | `disableBypassPermissionsMode` in managed-settings.json | Yes — system-level gate (requires sudo) | `cat "/Library/Application Support/ClaudeCode/managed-settings.json"` |
 | **Codex CLI** | `default_permissions = "global_lockdown"` + `filesystem "none"` in config.toml | Yes — sandbox gate | `grep "global_lockdown" ~/.codex/config.toml` |
 | **Codex CLI** | `codex-safe` wrapper blocks `--profile` overrides | Yes — shell gate | `codex-safe --profile foo --help` (should exit 64) |
-| **Copilot** | Instructions in `.instructions.md` | No — LLM guidance only | `ls ~/.copilot/instructions/` |
+| **Copilot CLI** | Instructions in `copilot-instructions.md` | No — LLM guidance only | `cat ~/.copilot/copilot-instructions.md` |
 
 Blocked files:
 - Environment: `.env`, `.env.*`, `.envrc`
@@ -114,36 +109,24 @@ Blocked files:
 - Keys/certs: `*.pem`, `*.key`, `id_rsa`, `id_ed25519`
 - Credentials: `.npmrc`, `.pypirc`, `.netrc`, `~/.aws/credentials`, `~/.azure/*`
 
-> **Note:** `~/.aws/credentials` and `~/.azure/*` are outside the project root. Codex `:project_roots` rules cannot scope to home-directory paths by design — these are protected by the sandbox and by not using `--dangerously-bypass-approvals-and-sandbox`. Claude Code uses `Read(~/.aws/credentials)` home-path syntax as defence-in-depth.
-
 ## Verification
 
-`install.sh` runs these checks automatically after install:
+`install.sh` runs these checks automatically:
 
-| Check | What it verifies |
-|---|---|
-| Claude Code deny rules | `Read(**/.env)` present in `~/.claude/settings.json` |
-| Codex global_lockdown profile | `default_permissions = "global_lockdown"` in `~/.codex/config.toml` |
-| codex-safe wrapper | Executable at `~/.local/bin/codex-safe` |
-| codex-safe blocks override | `codex-safe --profile foo` exits with code 64 |
-| Copilot instructions | `global-contract.instructions.md` exists in `~/.copilot/instructions/` |
-| Git conditional email | `hasconfig:remote` present in `~/.gitconfig` |
-| Claude Code bypass disabled (optional) | `disableBypassPermissionsMode` in managed-settings.json |
-
-Re-run verification at any time: `./install.sh` (idempotent — safe to re-run).
-
-## Git conditional email
-
-Uses `includeIf hasconfig:remote` (requires Git 2.36+) to automatically select the right email based on remote URL:
-
-| Remote | Email used |
-|---|---|
-| `github.com` (HTTPS or SSH) | `151698873+derricka-lau@users.noreply.github.com` |
-| Everything else (GitLab, Cardiff) | `lauf@cardiff.ac.uk` |
-
-No per-repo config needed. Works for any new repo automatically.
+| # | Check | What it verifies |
+|---|---|---|
+| 1 | Claude Code deny rules | `Read(**/.env)` in `~/.claude/settings.json` |
+| 2 | Codex global_lockdown profile | `default_permissions = "global_lockdown"` in `~/.codex/config.toml` |
+| 3 | codex-safe wrapper | Executable at `~/.local/bin/codex-safe` |
+| 4 | codex-safe blocks override | `codex-safe --profile foo` exits 64 |
+| 5 | Copilot CLI instructions | `copilot-instructions.md` exists in `~/.copilot/` |
+| 6 | Git conditional email | `hasconfig:remote` in `~/.gitconfig` |
+| 7 | Skills (all tools) | 7 skills in each of `~/.claude/skills/`, `~/.agents/skills/`, `~/.copilot/skills/` |
+| 8 | Claude managed settings (optional) | `disableBypassPermissionsMode` in managed-settings.json |
 
 ## Global contract (all three tools)
+
+The same global contract is deployed to all three CLI tools:
 
 - Common commands for test, lint, type-check across PHP, Python, TS
 - Strict types, concrete assertion examples, framework-native patterns
@@ -157,26 +140,37 @@ No per-repo config needed. Works for any new repo automatically.
 - Pre-completion checks: no debug statements, no secrets in diff, no commented-out code, DB migration rollback plan
 - Breach protocol with stop phrase
 
-## Copilot language-specific instructions
+## Skills (shared across all tools)
 
-Copilot supports `applyTo` globs, so language rules only load when relevant:
+Skills are deployed to `~/.claude/skills/`, `~/.agents/skills/`, and `~/.copilot/skills/`. All three CLIs auto-discover them via `SKILL.md` files.
 
-| File | Applies to | Key rules |
-|---|---|---|
-| `php.instructions.md` | `*.php` | CakePHP conventions, `assertSame()`, PSR-12, strict types |
-| `python.instructions.md` | `*.py` | Type hints, f-strings, pytest, pathlib |
-| `typescript.instructions.md` | `*.{ts,tsx}` | Strict TS, functional components, named exports |
+| Skill | Purpose |
+|---|---|
+| `php-cakephp` | PHP/CakePHP conventions, testing patterns, PSR-12, strict types |
+| `python` | Type hints, f-strings, pytest, pathlib |
+| `typescript-react` | Strict TS, functional components, named exports |
+| `web-search-rag-deep` | Exhaustive multi-pass web search (5-10+ searches), aggressive page reads |
+| `web-search-rag-quick` | Fast lean search (1-3 searches), concise responses |
+| `web-search-rag-official-deep` | Multi-pass targeting official/primary sources (4-10+ searches) |
+| `web-search-rag-official-quick` | Fast search targeting official sources (1-3 queries) |
+
+## Git conditional email
+
+Uses `includeIf hasconfig:remote` (requires Git 2.36+):
+
+| Remote | Email used |
+|---|---|
+| `github.com` (HTTPS or SSH) | `151698873+derricka-lau@users.noreply.github.com` |
+| Everything else (GitLab, Cardiff) | `lauf@cardiff.ac.uk` |
 
 ## Rollback
-
-To remove all installed config files:
 
 ```bash
 cd ~/dotfiles
 ./uninstall.sh
 ```
 
-This removes only files managed by `install.sh`. It does not uninstall the Claude Code CLI npm package.
+Removes only files managed by `install.sh`. Does not uninstall CLI npm packages.
 
 ## Updating
 

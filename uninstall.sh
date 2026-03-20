@@ -60,12 +60,15 @@ safe_rm ~/.codex/AGENTS.md
 safe_rm ~/.local/bin/codex-safe
 echo "Codex done."
 
-# Copilot
-safe_rm ~/.copilot/instructions/global-contract.instructions.md
-safe_rm ~/.copilot/instructions/php.instructions.md
-safe_rm ~/.copilot/instructions/python.instructions.md
-safe_rm ~/.copilot/instructions/typescript.instructions.md
+# Copilot CLI
+safe_rm ~/.copilot/copilot-instructions.md
 echo "Copilot done."
+
+# Skills (all three tools)
+for skill_file in ~/.claude/skills/*/SKILL.md ~/.agents/skills/*/SKILL.md ~/.copilot/skills/*/SKILL.md; do
+  [ -f "$skill_file" ] && safe_rm "$skill_file"
+done
+echo "Skills done."
 
 # Git
 safe_rm ~/.gitconfig-github

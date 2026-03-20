@@ -23,7 +23,7 @@ echo "NOTE: All existing config files will be overwritten (not merged)."
 # --- Backup existing config ---
 BACKUP_DIR="$HOME/.dotfiles-backup/$(date +%Y%m%d-%H%M%S)"
 BACKED_UP=false
-for f in ~/.claude/settings.json ~/.claude/CLAUDE.md ~/.codex/config.toml ~/.codex/AGENTS.md ~/.gitconfig ~/.gitconfig-github; do
+for f in ~/.claude/settings.json ~/.claude/CLAUDE.md ~/.claude/skills/*/SKILL.md ~/.agents/skills/*/SKILL.md ~/.copilot/copilot-instructions.md ~/.copilot/skills/*/SKILL.md ~/.codex/config.toml ~/.codex/AGENTS.md ~/.gitconfig ~/.gitconfig-github; do
   if [ -f "$f" ]; then
     if [ "$BACKED_UP" = false ]; then
       mkdir -p "$BACKUP_DIR"
@@ -46,6 +46,8 @@ cp "$SCRIPT_DIR/claude/CLAUDE.md" ~/.claude/CLAUDE.md
 cp "$SCRIPT_DIR/claude/MEMORY.md" ~/.claude/MEMORY.md
 cp "$SCRIPT_DIR/claude/memory/user_role.md" ~/.claude/memory/user_role.md
 echo "Claude Code settings, instructions, and memory installed."
+
+# Skills are installed per-tool after all tool sections (see below)
 
 # Managed settings (system-level, disables --dangerously-skip-permissions)
 MANAGED_DIR="/Library/Application Support/ClaudeCode"
@@ -83,12 +85,36 @@ cp "$SCRIPT_DIR/codex-safe" ~/.local/bin/codex-safe
 chmod +x ~/.local/bin/codex-safe
 echo "codex-safe wrapper installed."
 
-# --- GitHub Copilot ---
+# --- GitHub Copilot CLI ---
 echo ""
-echo "--- GitHub Copilot ---"
-mkdir -p ~/.copilot/instructions
-cp "$SCRIPT_DIR"/copilot/instructions/*.instructions.md ~/.copilot/instructions/
-echo "Copilot global and language-specific instructions installed."
+echo "--- Copilot CLI ---"
+mkdir -p ~/.copilot
+cp "$SCRIPT_DIR/copilot/copilot-instructions.md" ~/.copilot/copilot-instructions.md
+echo "Copilot CLI global instructions installed."
+
+# --- Skills (shared across all three tools) ---
+echo ""
+echo "--- Skills ---"
+if [ -d "$SCRIPT_DIR/skills" ]; then
+  SKILL_NAMES=""
+  for skill_dir in "$SCRIPT_DIR"/skills/*/; do
+    skill_name="$(basename "$skill_dir")"
+    SKILL_NAMES="$SKILL_NAMES $skill_name"
+
+    # Claude Code: ~/.claude/skills/<name>/SKILL.md
+    mkdir -p ~/.claude/skills/"$skill_name"
+    cp "$skill_dir"SKILL.md ~/.claude/skills/"$skill_name"/SKILL.md
+
+    # Codex CLI: ~/.agents/skills/<name>/SKILL.md
+    mkdir -p ~/.agents/skills/"$skill_name"
+    cp "$skill_dir"SKILL.md ~/.agents/skills/"$skill_name"/SKILL.md
+
+    # GitHub Copilot: ~/.copilot/skills/<name>/SKILL.md
+    mkdir -p ~/.copilot/skills/"$skill_name"
+    cp "$skill_dir"SKILL.md ~/.copilot/skills/"$skill_name"/SKILL.md
+  done
+  echo "Skills installed to Claude Code, Codex CLI, and Copilot:$SKILL_NAMES"
+fi
 
 # --- Git config ---
 echo ""
@@ -149,12 +175,12 @@ else
   FAIL=$((FAIL+1))
 fi
 
-# 5. Copilot instructions present
-if [ -f ~/.copilot/instructions/global-contract.instructions.md ]; then
-  echo "  [PASS] Copilot global instructions present"
+# 5. Copilot CLI instructions present
+if [ -f ~/.copilot/copilot-instructions.md ]; then
+  echo "  [PASS] Copilot CLI global instructions present"
   PASS=$((PASS+1))
 else
-  echo "  [FAIL] Copilot global instructions missing"
+  echo "  [FAIL] Copilot CLI global instructions missing"
   FAIL=$((FAIL+1))
 fi
 
@@ -167,7 +193,19 @@ else
   FAIL=$((FAIL+1))
 fi
 
-# 7. Claude Code managed settings (bypass disabled)
+# 7. Skills installed across all three tools
+CLAUDE_SKILLS=$(ls -1d ~/.claude/skills/*/SKILL.md 2>/dev/null | wc -l | tr -d ' ')
+CODEX_SKILLS=$(ls -1d ~/.agents/skills/*/SKILL.md 2>/dev/null | wc -l | tr -d ' ')
+COPILOT_SKILLS=$(ls -1d ~/.copilot/skills/*/SKILL.md 2>/dev/null | wc -l | tr -d ' ')
+if [ "$CLAUDE_SKILLS" -ge 7 ] && [ "$CODEX_SKILLS" -ge 7 ] && [ "$COPILOT_SKILLS" -ge 7 ]; then
+  echo "  [PASS] Skills installed: Claude($CLAUDE_SKILLS) Codex($CODEX_SKILLS) Copilot($COPILOT_SKILLS)"
+  PASS=$((PASS+1))
+else
+  echo "  [FAIL] Skills missing: Claude($CLAUDE_SKILLS) Codex($CODEX_SKILLS) Copilot($COPILOT_SKILLS) — expected 7 each"
+  FAIL=$((FAIL+1))
+fi
+
+# 8. Claude Code managed settings (bypass disabled)
 if [ -f "/Library/Application Support/ClaudeCode/managed-settings.json" ] && grep -q 'disableBypassPermissionsMode' "/Library/Application Support/ClaudeCode/managed-settings.json" 2>/dev/null; then
   echo "  [PASS] Claude Code bypass permissions disabled (managed settings)"
   PASS=$((PASS+1))
@@ -193,15 +231,18 @@ for f in \
   ~/.codex/config.toml \
   ~/.codex/AGENTS.md \
   ~/.local/bin/codex-safe \
-  ~/.copilot/instructions/global-contract.instructions.md \
-  ~/.copilot/instructions/php.instructions.md \
-  ~/.copilot/instructions/python.instructions.md \
-  ~/.copilot/instructions/typescript.instructions.md \
+  ~/.copilot/copilot-instructions.md \
   ~/.gitconfig \
   ~/.gitconfig-github \
   "/Library/Application Support/ClaudeCode/managed-settings.json"; do
   if [ -f "$f" ]; then
     shasum -a 256 "$f" >> "$MANIFEST"
+  fi
+done
+# Add all skill files to manifest
+for skill_file in ~/.claude/skills/*/SKILL.md ~/.agents/skills/*/SKILL.md ~/.copilot/skills/*/SKILL.md; do
+  if [ -f "$skill_file" ]; then
+    shasum -a 256 "$skill_file" >> "$MANIFEST"
   fi
 done
 echo "Manifest written to $MANIFEST"

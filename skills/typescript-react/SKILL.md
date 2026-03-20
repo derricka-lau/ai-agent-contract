@@ -1,8 +1,9 @@
 ---
-applyTo: "*.{ts,tsx}"
+name: typescript-react
+description: TypeScript and React coding conventions — strict typing, functional components, testing patterns. Use when working with TypeScript, TSX, or React files.
 ---
 
-# TypeScript / React conventions
+# TypeScript / React Conventions
 
 ## Code style
 - Use strict TypeScript (`strict: true`). No `any` unless absolutely unavoidable.
