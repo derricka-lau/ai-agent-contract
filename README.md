@@ -7,7 +7,7 @@ One `install.sh` configures Claude Code, Codex CLI, and Copilot CLI with identic
 ## Prerequisites
 
 - `git`
-- `node` and `npm` (for Claude Code CLI install)
+- `node` and `npm` (for all three CLI installs)
 - `bash` or `zsh`
 - Write access for global npm bin (`npm install -g`)
 - Network access (for npm install)
@@ -61,8 +61,8 @@ cd ~/dotfiles
 `install.sh` will:
 1. Check prerequisites (git, node, npm)
 2. **Overwrite** existing config files (not merge) — intentional for reproducibility
-3. Install CLIs if missing
-4. Deploy shared skills to all three tools
+3. Install all three CLIs via npm if missing (Claude Code, Codex, Copilot)
+4. Deploy config, instructions, and shared skills to all three tools
 5. Configure git with conditional email (GitHub noreply / GitLab Cardiff)
 6. Optionally install system-level managed settings (requires sudo on macOS)
 7. Run 8 verification checks and report results
@@ -85,10 +85,12 @@ Every devcontainer will automatically clone this repo and run `install.sh` on cr
 |---|---|---|
 | Claude Code settings + instructions + memory | `~/.claude/` | Full overwrite |
 | Claude Code managed settings (optional, requires sudo) | `/Library/Application Support/ClaudeCode/` | Full overwrite |
-| Claude Code CLI (if missing) | npm global | Skip if present |
+| Claude Code CLI (if missing) | `npm install -g @anthropic-ai/claude-code` | Skip if present |
 | Codex config + AGENTS.md | `~/.codex/` | Full overwrite |
+| Codex CLI (if missing) | `npm install -g @openai/codex` | Skip if present |
 | `codex-safe` wrapper | `~/.local/bin/` | Full overwrite |
 | Copilot CLI global instructions | `~/.copilot/copilot-instructions.md` | Full overwrite |
+| Copilot CLI (if missing) | `npm install -g @github/copilot` | Skip if present |
 | Skills (all three tools) | `~/.claude/skills/`, `~/.agents/skills/`, `~/.copilot/skills/` | Full overwrite |
 | Git config + GitHub conditional include | `~/.gitconfig`, `~/.gitconfig-github` | Full overwrite |
 | Add `~/.local/bin` to PATH | `~/.zshrc` or `~/.bashrc` | Append if missing |
