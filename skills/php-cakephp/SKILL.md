@@ -1,8 +1,9 @@
 ---
-applyTo: "*.php"
+name: php-cakephp
+description: PHP and CakePHP coding conventions — testing patterns, code style, and framework-native approaches. Use when working with PHP files, CakePHP controllers, models, entities, commands, or PHPUnit tests.
 ---
 
-# PHP / CakePHP conventions
+# PHP / CakePHP Conventions
 
 ## Testing
 - Use `assertSame()` over `assertTrue($x === 'y')` — strict equality, not loose.

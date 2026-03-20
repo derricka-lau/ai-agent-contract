@@ -1,8 +1,9 @@
 ---
-applyTo: "*.py"
+name: python
+description: Python coding conventions — type hints, testing with pytest, code style. Use when working with Python files, FastAPI endpoints, or pytest tests.
 ---
 
-# Python conventions
+# Python Conventions
 
 ## Code style
 - Always use type hints on function signatures and return types.

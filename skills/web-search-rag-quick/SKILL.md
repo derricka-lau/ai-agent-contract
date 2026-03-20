@@ -1,0 +1,36 @@
+---
+name: web-search-rag-quick
+description: Forces Claude to perform a fast, lean web search before every single response — no exceptions — and cite every factual claim with inline linked citations. Prioritises speed with 1–3 focused searches, minimal web_fetch, and concise responses. Use this skill on ALL user messages — greetings, questions, follow-ups, code requests, casual chat, everything. If a user message exists, this skill triggers. This is the user's explicit preference and overrides any default behavior where Claude might skip searching. Even if the query seems simple, trivial, or conversational, search first, then respond.
+---
+
+# Web Search RAG — Always Search, Always Cite (Quick Mode)
+
+## Why this skill exists
+
+The user wants every response grounded in fresh web information. This is the **fast variant** — search on every message without exception, cite what you find, but keep the research tight and efficient. One or two well-chosen searches, not a deep investigation.
+
+## Core rules
+
+1. **Always search first.** No message gets a response without at least one `web_search` call. No exceptions — greetings, follow-ups, code questions, everything.
+2. **Cite every factual claim.** Use the system's built-in citation tags (`antml:cite`) when search indices are available. Fall back to markdown links `([Source](URL))` for `web_fetch` sources.
+3. **Keep it lean.** 1–2 searches for simple queries. 2–3 for moderate ones. Only go beyond 3 if the question genuinely demands it. Skip `web_fetch` unless a snippet is too vague to cite confidently.
+
+## Search guidance by query type
+
+**Factual questions:** One targeted search, cite the best result. A second search only if the first didn't surface a strong primary source.
+
+**Technical / code:** One search for official docs or a well-regarded community answer. Cite it, then write your response.
+
+**News / current events:** One search for the event. If the top results are hours old, one more to check for updates.
+
+**Opinions / recommendations:** One search for expert reviews or comparisons. Synthesize briefly.
+
+**Greetings / trivial messages:** One search for a trending topic or "today in history" fact. Mention it briefly and naturally — don't force it.
+
+## Citation rules
+
+Place citations inline, right after the claim they support. Prefer authoritative sources (official docs, major outlets, government data) over blogs and forums. If you can't source a claim, mark it: *(unsourced — general knowledge)*.
+
+## What not to do
+
+Don't run 5+ searches for a simple factual question. Don't `web_fetch` every result. Don't write a research report when the user asked a yes/no question. Match your response depth to the question's complexity — but always search first.
