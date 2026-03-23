@@ -53,6 +53,9 @@ safe_rm ~/.claude/CLAUDE.md
 safe_rm ~/.claude/MEMORY.md
 safe_rm ~/.claude/memory/user_role.md
 safe_rm ~/.claude/prompts/workflow.md
+for agent_file in ~/.claude/agents/*.md; do
+  [ -f "$agent_file" ] && safe_rm "$agent_file"
+done
 echo "Claude Code done."
 
 # Codex CLI
@@ -61,12 +64,16 @@ safe_rm ~/.codex/AGENTS.md
 safe_rm ~/.codex/MEMORY.md
 safe_rm ~/.codex/memory/user_role.md
 safe_rm ~/.codex/prompts/workflow.md
+for agent_file in ~/.codex/agents/*.toml; do
+  [ -f "$agent_file" ] && safe_rm "$agent_file"
+done
 safe_rm ~/.local/bin/codex-safe
 echo "Codex done."
 
 # Copilot (extension + CLI)
 safe_rm ~/.copilot/instructions/global-contract.instructions.md
 safe_rm ~/.copilot/copilot-instructions.md
+safe_rm ~/.copilot/AGENTS.md
 safe_rm ~/.copilot/MEMORY.md
 safe_rm ~/.copilot/memory/user_role.md
 safe_rm ~/.copilot/prompts/workflow.md

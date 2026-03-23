@@ -17,20 +17,25 @@ One `install.sh` configures Claude Code, Codex CLI, and Copilot CLI with identic
 ```
 dotfiles/
 ├── claude/
-│   ├── settings.json              # Deny rules (deterministic, runtime-enforced)
+│   ├── settings.json              # Deny rules + effortLevel + autoMemory (deterministic)
 │   ├── CLAUDE.md                  # Global contract + common commands
 │   ├── managed-settings.json      # System-level: disables --dangerously-skip-permissions
 │   ├── MEMORY.md                  # Memory index
-│   └── memory/
-│       └── user_role.md           # User context
+│   ├── memory/
+│   │   └── user_role.md           # User context
+│   └── agents/
+│       └── reviewer.md            # Read-only code review subagent
 ├── codex/
-│   ├── config.toml                # Deny rules (deterministic, filesystem "none")
+│   ├── config.toml                # Deny rules + tui + history + agents (deterministic)
 │   ├── AGENTS.md                  # Global contract + common commands
 │   ├── MEMORY.md                  # Memory index (same content as Claude/Copilot)
-│   └── memory/
-│       └── user_role.md           # Shared user context
+│   ├── memory/
+│   │   └── user_role.md           # Shared user context
+│   └── agents/
+│       └── reviewer.toml          # Read-only code review subagent
 ├── copilot/
 │   ├── copilot-instructions.md    # CLI: global contract + common commands
+│   ├── AGENTS.md                  # CLI: global contract (AGENTS.md format)
 │   ├── MEMORY.md                  # Memory index (same content as Claude/Codex)
 │   ├── memory/
 │   │   └── user_role.md           # Shared user context
@@ -70,10 +75,11 @@ cd ~/dotfiles
 1. Check prerequisites (git, node, npm)
 2. **Overwrite** existing config files (not merge) — intentional for reproducibility
 3. Install all three CLIs via npm if missing (Claude Code, Codex, Copilot)
-4. Deploy config, instructions, shared memory, shared workflow prompts, and shared skills to all three tools
+4. Deploy config, instructions, subagents, shared memory, shared workflow prompts, and shared skills to all three tools
 5. Configure git with conditional email (GitHub noreply / GitLab Cardiff)
-6. Optionally install system-level managed settings (requires sudo on macOS)
-7. Run 9 verification checks and report results
+6. Set `COPILOT_CUSTOM_INSTRUCTIONS_DIRS` env var for Copilot CLI
+7. Optionally install system-level managed settings (requires sudo on macOS)
+8. Run 11 verification checks and report results
 
 ### VSCode devcontainers (automatic)
 
@@ -99,20 +105,21 @@ Every devcontainer will automatically clone this repo and run `install.sh` on cr
 
 | Step | Target | Overwrite policy |
 |---|---|---|
-| Claude Code settings + instructions + memory | `~/.claude/` | Full overwrite |
+| Claude Code settings + instructions + memory + subagents | `~/.claude/` | Full overwrite |
 | Claude Code managed settings (optional, requires sudo) | `/Library/Application Support/ClaudeCode/` | Full overwrite |
 | Claude Code CLI (if missing) | `npm install -g @anthropic-ai/claude-code` | Skip if present |
-| Codex config + AGENTS.md | `~/.codex/` | Full overwrite |
+| Codex config + AGENTS.md + tui/history/agents | `~/.codex/` | Full overwrite |
 | Codex memory + workflow prompts | `~/.codex/MEMORY.md`, `~/.codex/memory/`, `~/.codex/prompts/workflow.md` | Full overwrite |
 | Codex CLI (if missing) | `npm install -g @openai/codex` | Skip if present |
 | `codex-safe` wrapper | `~/.local/bin/` | Full overwrite |
 | Copilot VS Code extension instructions | `~/.copilot/instructions/` | Full overwrite |
-| Copilot CLI global instructions | `~/.copilot/copilot-instructions.md` | Full overwrite |
+| Copilot CLI global instructions + AGENTS.md | `~/.copilot/copilot-instructions.md`, `~/.copilot/AGENTS.md` | Full overwrite |
 | Copilot memory + workflow prompts | `~/.copilot/MEMORY.md`, `~/.copilot/memory/`, `~/.copilot/prompts/workflow.md` | Full overwrite |
 | Copilot CLI (if missing) | `npm install -g @github/copilot` | Skip if present |
 | Skills (all three tools) | `~/.claude/skills/`, `~/.agents/skills/`, `~/.copilot/skills/` | Full overwrite |
 | Git config + GitHub conditional include | `~/.gitconfig`, `~/.gitconfig-github` | Full overwrite |
 | Add `~/.local/bin` to PATH | `~/.zshrc` or `~/.bashrc` | Append if missing |
+| Set `COPILOT_CUSTOM_INSTRUCTIONS_DIRS` | `~/.zshrc` or `~/.bashrc` | Append if missing |
 
 ## Sensitive file protection
 
@@ -144,7 +151,9 @@ Blocked files:
 | 6 | Shared memory + prompts | Memory index, user role, and `prompts/workflow.md` present for Claude, Codex, Copilot |
 | 7 | Git conditional email | `hasconfig:remote` in `~/.gitconfig` |
 | 8 | Skills (all tools) | 7 skills in each of `~/.claude/skills/`, `~/.agents/skills/`, `~/.copilot/skills/` |
-| 9 | Claude managed settings (optional) | `disableBypassPermissionsMode` in managed-settings.json |
+| 9 | Subagents (Claude + Codex) | `reviewer.md` in `~/.claude/agents/`, `reviewer.toml` in `~/.codex/agents/` |
+| 10 | Copilot AGENTS.md | `~/.copilot/AGENTS.md` present |
+| 11 | Claude managed settings (optional) | `disableBypassPermissionsMode` in managed-settings.json |
 
 ## Global contract (all three tools)
 
