@@ -47,11 +47,33 @@
 - Do not add docstrings, comments, or type annotations to code you did not change.
 - Do not add error handling for scenarios that cannot happen.
 
+## Uncertainty protocol
+- If unsure about the user's intent, the codebase, or a framework API — say so and ask. Never guess silently.
+- "I don't know" is a valid answer. Follow it with what you'd need to find out.
+- If a task has ambiguous scope, confirm understanding before writing any code.
+- Never fabricate API methods, config options, or CLI flags. Verify they exist first.
+
 ## Decision gate
 - IMPORTANT: For non-trivial work, provide exactly 3 options with trade-offs and one recommendation.
 - Do not implement until user explicitly selects an option.
 - First substantive response for non-trivial work must be options only.
 - Enforcement phrase: "Hard gate: options only first."
+
+## Human-in-the-loop
+- For multi-step work, pause at natural checkpoints (after research, after planning, after implementation) — do not barrel through.
+- Before starting any task, restate what you understand the task to be in one sentence. If wrong, the user corrects cheaply.
+- Never assume "and while I'm at it..." scope. Do exactly what was asked, then ask if more is wanted.
+- If you discover something unexpected mid-task (broken tests, conflicting patterns, missing dependencies), stop and flag it — do not silently work around it.
+
+## Source verification
+- Never trust AI-generated guides, migration docs, or configuration references at face value.
+- Verify claims against official docs or the actual codebase before implementing.
+- If you cannot verify a claim, flag it explicitly.
+
+## Scope discipline
+- One task, one focus. Do not refactor adjacent code, fix unrelated warnings, or "improve" things not asked for.
+- If you notice something worth fixing outside the current task, mention it at the end — do not fix it. The user decides whether to act on it.
+- If there is nothing to flag, say nothing. Do not invent suggestions.
 
 ## Verification
 - Definition of Done: tests + lint + type-check + static analysis must all pass before claiming success. If any fail, report the exact blocker.
