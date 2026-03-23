@@ -29,13 +29,16 @@ for f in \
   ~/.claude/MEMORY.md \
   ~/.claude/memory/user_role.md \
   ~/.claude/prompts/workflow.md \
+  ~/.claude/agents/*.md \
   ~/.codex/config.toml \
   ~/.codex/AGENTS.md \
   ~/.codex/MEMORY.md \
   ~/.codex/memory/user_role.md \
   ~/.codex/prompts/workflow.md \
+  ~/.codex/agents/*.toml \
   ~/.copilot/instructions/*.instructions.md \
   ~/.copilot/copilot-instructions.md \
+  ~/.copilot/AGENTS.md \
   ~/.copilot/MEMORY.md \
   ~/.copilot/memory/user_role.md \
   ~/.copilot/prompts/workflow.md \
@@ -60,13 +63,17 @@ fi
 # --- Claude Code ---
 echo ""
 echo "--- Claude Code ---"
-mkdir -p ~/.claude/memory ~/.claude/prompts
+mkdir -p ~/.claude/memory ~/.claude/prompts ~/.claude/agents
 cp "$SCRIPT_DIR/claude/settings.json" ~/.claude/settings.json
 cp "$SCRIPT_DIR/claude/CLAUDE.md" ~/.claude/CLAUDE.md
 cp "$SCRIPT_DIR/claude/MEMORY.md" ~/.claude/MEMORY.md
 cp "$SCRIPT_DIR/claude/memory/user_role.md" ~/.claude/memory/user_role.md
 cp "$SCRIPT_DIR/prompts/workflow.md" ~/.claude/prompts/workflow.md
-echo "Claude Code settings, instructions, and memory installed."
+# Subagents
+for agent_file in "$SCRIPT_DIR"/claude/agents/*.md; do
+  [ -f "$agent_file" ] && cp "$agent_file" ~/.claude/agents/
+done
+echo "Claude Code settings, instructions, memory, and subagents installed."
 
 # Skills are installed per-tool after all tool sections (see below)
 
@@ -96,13 +103,17 @@ fi
 # --- Codex CLI ---
 echo ""
 echo "--- Codex CLI ---"
-mkdir -p ~/.codex/memory ~/.codex/prompts
+mkdir -p ~/.codex/memory ~/.codex/prompts ~/.codex/agents
 cp "$SCRIPT_DIR/codex/config.toml" ~/.codex/config.toml
 cp "$SCRIPT_DIR/codex/AGENTS.md" ~/.codex/AGENTS.md
 cp "$SCRIPT_DIR/codex/MEMORY.md" ~/.codex/MEMORY.md
 cp "$SCRIPT_DIR/codex/memory/user_role.md" ~/.codex/memory/user_role.md
 cp "$SCRIPT_DIR/prompts/workflow.md" ~/.codex/prompts/workflow.md
-echo "Codex config, instructions, memory, and workflow prompts installed."
+# Subagents
+for agent_file in "$SCRIPT_DIR"/codex/agents/*.toml; do
+  [ -f "$agent_file" ] && cp "$agent_file" ~/.codex/agents/
+done
+echo "Codex config, instructions, memory, workflow prompts, and subagents installed."
 
 mkdir -p ~/.local/bin
 cp "$SCRIPT_DIR/codex-safe" ~/.local/bin/codex-safe
@@ -124,12 +135,13 @@ echo "--- GitHub Copilot ---"
 mkdir -p ~/.copilot/instructions ~/.copilot/memory ~/.copilot/prompts
 cp "$SCRIPT_DIR"/copilot/instructions/*.instructions.md ~/.copilot/instructions/
 echo "Copilot VS Code extension instructions installed."
-# CLI global instructions
+# CLI global instructions + AGENTS.md
 cp "$SCRIPT_DIR/copilot/copilot-instructions.md" ~/.copilot/copilot-instructions.md
+cp "$SCRIPT_DIR/copilot/AGENTS.md" ~/.copilot/AGENTS.md
 cp "$SCRIPT_DIR/copilot/MEMORY.md" ~/.copilot/MEMORY.md
 cp "$SCRIPT_DIR/copilot/memory/user_role.md" ~/.copilot/memory/user_role.md
 cp "$SCRIPT_DIR/prompts/workflow.md" ~/.copilot/prompts/workflow.md
-echo "Copilot CLI global instructions, memory, and workflow prompts installed."
+echo "Copilot CLI global instructions, AGENTS.md, memory, and workflow prompts installed."
 
 if npm list -g @github/copilot &> /dev/null; then
   echo "Copilot CLI already installed."
@@ -170,17 +182,24 @@ cp "$SCRIPT_DIR/gitconfig" ~/.gitconfig
 cp "$SCRIPT_DIR/gitconfig-github" ~/.gitconfig-github
 echo "Git config installed (Cardiff email default, GitHub noreply for github.com remotes)."
 
+# Detect the user's actual shell rc file
+case "$SHELL" in
+  */zsh)  SHELL_RC="$HOME/.zshrc" ;;
+  */bash) SHELL_RC="$HOME/.bashrc" ;;
+  *)      SHELL_RC="$HOME/.profile" ;;
+esac
+touch "$SHELL_RC"
+
 # Ensure ~/.local/bin is on PATH
 if ! echo "$PATH" | grep -q "$HOME/.local/bin"; then
-  # Detect the user's actual shell, not just which rc file exists
-  case "$SHELL" in
-    */zsh)  SHELL_RC="$HOME/.zshrc" ;;
-    */bash) SHELL_RC="$HOME/.bashrc" ;;
-    *)      SHELL_RC="$HOME/.profile" ;;
-  esac
-  touch "$SHELL_RC"
   echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$SHELL_RC"
   echo "Added ~/.local/bin to PATH in $SHELL_RC"
+fi
+
+# Ensure COPILOT_CUSTOM_INSTRUCTIONS_DIRS is set
+if ! grep -q 'COPILOT_CUSTOM_INSTRUCTIONS_DIRS' "$SHELL_RC" 2>/dev/null; then
+  echo 'export COPILOT_CUSTOM_INSTRUCTIONS_DIRS="$HOME/.copilot/instructions"' >> "$SHELL_RC"
+  echo "Added COPILOT_CUSTOM_INSTRUCTIONS_DIRS to $SHELL_RC"
 fi
 
 # --- Verification ---
@@ -268,7 +287,25 @@ else
   FAIL=$((FAIL+1))
 fi
 
-# 9. Claude Code managed settings (bypass disabled)
+# 9. Subagents (Claude Code + Codex)
+if [ -f ~/.claude/agents/reviewer.md ] && [ -f ~/.codex/agents/reviewer.toml ]; then
+  echo "  [PASS] Subagents installed (Claude + Codex)"
+  PASS=$((PASS+1))
+else
+  echo "  [FAIL] Subagents missing (Claude and/or Codex)"
+  FAIL=$((FAIL+1))
+fi
+
+# 10. Copilot AGENTS.md
+if [ -f ~/.copilot/AGENTS.md ]; then
+  echo "  [PASS] Copilot AGENTS.md installed"
+  PASS=$((PASS+1))
+else
+  echo "  [FAIL] Copilot AGENTS.md missing"
+  FAIL=$((FAIL+1))
+fi
+
+# 11. Claude Code managed settings (bypass disabled)
 if [ -f "/Library/Application Support/ClaudeCode/managed-settings.json" ] && grep -q 'disableBypassPermissionsMode' "/Library/Application Support/ClaudeCode/managed-settings.json" 2>/dev/null; then
   echo "  [PASS] Claude Code bypass permissions disabled (managed settings)"
   PASS=$((PASS+1))
@@ -292,13 +329,16 @@ for f in \
   ~/.claude/MEMORY.md \
   ~/.claude/memory/user_role.md \
   ~/.claude/prompts/workflow.md \
+  ~/.claude/agents/reviewer.md \
   ~/.codex/config.toml \
   ~/.codex/AGENTS.md \
   ~/.codex/MEMORY.md \
   ~/.codex/memory/user_role.md \
   ~/.codex/prompts/workflow.md \
+  ~/.codex/agents/reviewer.toml \
   ~/.local/bin/codex-safe \
   ~/.copilot/copilot-instructions.md \
+  ~/.copilot/AGENTS.md \
   ~/.copilot/instructions/global-contract.instructions.md \
   ~/.copilot/MEMORY.md \
   ~/.copilot/memory/user_role.md \

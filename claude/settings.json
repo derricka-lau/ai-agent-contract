@@ -1,6 +1,8 @@
 {
   "language": "british english",
   "alwaysThinkingEnabled": true,
+  "effortLevel": "high",
+  "autoMemoryEnabled": true,
   "permissions": {
     "deny": [
       "Read(**/.env)",
