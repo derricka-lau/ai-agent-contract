@@ -43,12 +43,18 @@ If you're unsure what counts as "official" for a topic, ask yourself: "Who is th
 
 ### Step 2: Execute a source-prioritized search strategy
 
-**Pass 1 — Hunt for primary sources (2–4 searches).** Craft queries that are likely to surface official sources directly. Techniques that help:
+**Recency enforcement (applies to ALL passes):**
+- **Always include the current year** in queries about evolving topics. `"WHO hand hygiene guidelines 2026"` not `"WHO hand hygiene guidelines 2024"`.
+- **Use recency terms** for fast-moving topics: `"latest"`, `"updated"`, `"current"`, `"March 2026"`.
+- **After every pass, check publication dates.** If the official source you found is outdated, immediately search for a newer version before proceeding. Outdated official docs are worse than current ones.
+- **Prefer the latest version** of official sources. `"ECMAScript 2025 specification"` not `"ECMAScript specification"`. `"NHS NICE guidelines 2026"` not `"NHS NICE guidelines"`.
 
-- Include the organization name: `"WHO guidelines hand hygiene 2024"` not just `"hand washing guidelines"`
+**Pass 1 — Hunt for primary sources (2–4 searches).** Craft queries that are likely to surface official sources directly, always including the current year for evolving topics. Techniques that help:
+
+- Include the organisation name with year: `"WHO guidelines hand hygiene 2026"` not just `"hand washing guidelines"`
 - Use site-specific terms: `site:github.com`, `site:gov.uk`, `site:nih.gov` (but note: only use `site:` if you're fairly confident the source lives on that domain — it narrows results aggressively)
 - Search for document types: add terms like `"official"`, `"specification"`, `"guidelines"`, `"documentation"`, `"press release"`, `"annual report"`, `"release notes"`
-- Search for the canonical name of the thing: `"ECMAScript 2024 specification"` rather than `"latest JavaScript features"`
+- Search for the canonical name with version: `"ECMAScript 2025 specification"` rather than `"latest JavaScript features"`
 
 **Pass 2 — Fetch and read the primary sources (2–4 fetches).** Once you find promising official URLs, `web_fetch` them. Read the actual content — don't rely on search snippets for primary sources. You need to verify the claim is actually there, understand the context and caveats, and get precise details (version numbers, dates, exact figures, methodology).
 
@@ -76,6 +82,7 @@ Before responding, verify:
 - Is every major claim backed by the most primary source I could find?
 - Did I `web_fetch` and actually read the key official sources rather than relying on snippets?
 - Have I traced back through citation chains to the original source where possible?
+- **Are my official sources the latest versions? If any are outdated on an evolving topic, search for a newer version.**
 - Am I being transparent about which sources are primary versus secondary?
 - For any claim where I only found secondary sources, have I flagged that?
 
@@ -91,4 +98,4 @@ This is not optional. Every message triggers a search. For trivial messages (gre
 
 **When the official source contradicts secondary reporting:** This happens more than people expect. Lead with the official source, quote the key detail, and note the discrepancy with the secondary coverage. The user can decide what to trust.
 
-**When the official source is outdated:** Note the date and search for whether a newer version or superseding document exists. If the old version is all that's available, cite it with the date and flag that it may not reflect the current state.
+**When the official source is outdated:** Note the date and search for a newer version or superseding document — always include the current year in this follow-up search. If the old version is all that's available, cite it with the date and explicitly flag that it may not reflect the current state. Never silently cite an outdated official source on an evolving topic.
