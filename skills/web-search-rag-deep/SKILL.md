@@ -28,11 +28,17 @@ For complex or multi-faceted questions, mentally outline 3–8 distinct search q
 
 This is the heart of the skill. The user has explicitly opted out of efficiency concerns, so go deep.
 
-**Pass 1 — Broad discovery (1–3 searches):** Start with the most direct queries for the core topic. Scan the results for key themes, terminology, and source quality.
+**Recency enforcement (applies to ALL passes):**
+- **Always include the current year** in queries about evolving topics. `"React Server Components 2026"` not `"React Server Components"`.
+- **Use recency terms** for fast-moving topics: `"latest"`, `"new"`, `"updated"`, `"March 2026"`.
+- **After every pass, check publication dates.** If the top results are 6+ months old on a current topic, immediately re-search with explicit date qualifiers before moving to the next pass. Do not carry stale sources forward.
+- **Prefer recent sources** when ranking results of similar authority. A 2026 article from a domain expert beats a 2023 article from the same expert if the topic has evolved.
 
-**Pass 2 — Targeted deep-dives (2–5 searches):** Based on what Pass 1 revealed, search for specific sub-topics, named entities, technical details, statistics, or counterarguments that surfaced. Use more specific and refined queries now that you know the landscape.
+**Pass 1 — Broad discovery (1–3 searches):** Start with the most direct queries for the core topic, including the current year for evolving topics. Scan the results for key themes, terminology, source quality, and **publication dates**.
 
-**Pass 3 — Verification and gap-filling (1–3 searches):** Search for anything that seems under-supported, contradictory, or that you want to cross-reference. Look for primary sources (official reports, documentation, government data, peer-reviewed papers) to replace or supplement secondary sources.
+**Pass 2 — Targeted deep-dives (2–5 searches):** Based on what Pass 1 revealed, search for specific sub-topics, named entities, technical details, statistics, or counterarguments that surfaced. Use more specific and refined queries now that you know the landscape. If Pass 1 results were stale, front-load date qualifiers here.
+
+**Pass 3 — Verification and gap-filling (1–3 searches):** Search for anything that seems under-supported, contradictory, or that you want to cross-reference. Look for primary sources (official reports, documentation, government data, peer-reviewed papers) to replace or supplement secondary sources. Also use this pass to find more recent versions of any older sources cited in earlier passes.
 
 **Use `web_fetch` aggressively.** Search result snippets are often too brief to fully understand a source's claims. After searching, `web_fetch` the most promising URLs to read the full content. This is especially important for:
 - News articles where the headline and snippet don't tell the full story
@@ -78,10 +84,11 @@ Once research is complete, write your response. The quality standard here is hig
 
 ### Step 4: Quality check before responding
 
-Before finalizing your response, mentally verify:
+Before finalising your response, mentally verify:
 - Does every factual claim have a citation?
 - Have I cross-referenced the most important claims against multiple sources?
 - Am I using the most authoritative and recent sources available?
+- **Are any of my key sources older than 12 months on an evolving topic? If so, search again with date qualifiers.**
 - Have I been transparent about any contradictions or limitations in the evidence?
 - Is the response actually better than what I could have produced from training data alone? (If not, search more.)
 
@@ -94,12 +101,14 @@ This is not optional or conditional. The user has explicitly requested this beha
 When multiple sources are available, prefer them in roughly this order:
 
 1. **Primary sources** — official documentation, government data, peer-reviewed research, court records, original announcements, SEC filings
-2. **Authoritative secondary sources** — established news organizations (Reuters, AP, major national papers), specialist publications, encyclopedia entries
+2. **Authoritative secondary sources** — established news organisations (Reuters, AP, major national papers), specialist publications, encyclopaedia entries
 3. **Expert analysis** — think tanks, research institutions, domain-specific analysts with named credentials
 4. **High-quality community sources** — well-maintained wikis, Stack Overflow accepted answers, established technical blogs
 5. **General secondary sources** — news aggregators, general-interest blogs, opinion pieces (cite as opinion, not fact)
 
-Avoid citing: content farms, SEO-optimized listicles, anonymous forums (unless specifically relevant), and any source that doesn't demonstrate expertise on the topic.
+**Recency as a tiebreaker:** Within the same tier, prefer the more recent source. A 2026 primary source beats a 2023 primary source on evolving topics. A recent expert analysis that references newer data beats an older one, even if the older author is more well-known.
+
+Avoid citing: content farms, SEO-optimised listicles, anonymous forums (unless specifically relevant), and any source that doesn't demonstrate expertise on the topic.
 
 ## Handling edge cases
 

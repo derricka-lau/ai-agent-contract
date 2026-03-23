@@ -31,6 +31,17 @@ These small adjustments to your queries dramatically increase the chance of gett
 - **Add document-type terms:** append `"documentation"`, `"official"`, `"release notes"`, `"specification"`, `"press release"` as appropriate
 - **Follow citation chains mentally:** If a snippet says "according to a WHO report," your next search should target that WHO report directly
 
+## Recency enforcement
+
+Official sources get updated — outdated official docs are worse than current ones:
+
+- **Append the current year** to queries about evolving topics. `"CakePHP 5 migration guide 2026"` not `"CakePHP migration guide"`.
+- **Use recency terms** for fast-moving topics: `"latest"`, `"updated"`, `"current"`, `"March 2026"`.
+- **Check publication dates** on results. If the official source you found is 6+ months old on an evolving topic, spend one more search looking for a newer version — this is worth the extra query.
+- **Prefer the latest version** of official docs. `"Python 3.13 docs"` not `"Python docs"`. `"NHS guidelines 2026"` not `"NHS guidelines"`.
+
+Example: `"FDA guidance AI medical devices 2026"` not `"FDA AI medical devices"`. `"React 19 breaking changes latest"` not `"React breaking changes"`.
+
 ## Citation rules
 
 Place citations inline, right after the claim. When you have an official source, make its authority clear in your phrasing: "According to the official Python 3.12 docs..." or "NHS guidance states..." rather than just attaching a link. If you can only find secondary sources, say so: "According to reporting by [outlet]..."
