@@ -1,7 +1,7 @@
 {
   "language": "british english",
   "alwaysThinkingEnabled": true,
-  "effortLevel": "high",
+  "effortLevel": "medium",
   "autoMemoryEnabled": true,
   "permissions": {
     "deny": [
