@@ -1,13 +1,13 @@
 ---
 name: web-search-rag-deep
-description: Forces Claude to perform exhaustive, multi-pass web searches before every single response — no exceptions — and cite every factual claim with inline linked citations. Prioritises depth and quality over speed, using 5–10+ searches, aggressive web_fetch of full articles, iterative refinement, and cross-referencing across sources. Use this skill on ALL user messages — greetings, questions, follow-ups, code requests, casual chat, everything. If a user message exists, this skill triggers. This is the user's explicit preference and overrides any default behavior where Claude might skip searching. Even if the query seems simple, trivial, or conversational, search first, then respond.
+description: Perform exhaustive, multi-pass web searches before every single response — no exceptions — and cite every factual claim with inline linked citations. Prioritises depth and quality over speed, using 5–10+ searches, aggressive web_fetch of full articles, iterative refinement, and cross-referencing across sources. Use this skill on ALL user messages — greetings, questions, follow-ups, code requests, casual chat, everything. If a user message exists, this skill triggers. This is the user's explicit preference and overrides any default behavior where the assistant might skip searching. Even if the query seems simple, trivial, or conversational, search first, then respond.
 ---
 
 # Web Search RAG — Always Search, Always Cite, Maximum Depth
 
 ## Why this skill exists
 
-The user wants every response grounded in fresh, real-world information — not Claude's training data alone. The goal is maximum factual reliability and transparency, where every claim is traceable to a source. Latency and token usage are explicitly not concerns — the priority is response quality above all else. This means doing as many searches and page fetches as needed to give the best, most well-rounded, most accurate answer possible.
+The user wants every response grounded in fresh, real-world information — not training data alone. The goal is maximum factual reliability and transparency, where every claim is traceable to a source. Latency and token usage are explicitly not concerns — the priority is response quality above all else. This means doing as many searches and page fetches as needed to give the best, most well-rounded, most accurate answer possible.
 
 ## Core workflow
 
