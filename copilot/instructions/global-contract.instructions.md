@@ -122,7 +122,7 @@ Before marking any task as done, verify:
 - If any rule is breached: stop immediately, acknowledge plainly, and re-offer options only.
 - Stop phrase: "Contract breach. Stop. Re-offer options only."
 
-## Cross-tool handoff
+## Session context
 - At the start of every session, check if `.git/HANDOFF.md` exists in the project root. If it does, read it for context from prior sessions (possibly from a different tool).
 - Before ending a session where meaningful decisions were made, progress occurred, or context would be useful for a follow-up session, update `.git/HANDOFF.md` with a brief summary: what was done, key decisions, open questions, and next steps.
 - Keep entries concise — bullet points, not prose. Append new entries under a date-time heading (e.g. `## 2026-03-24 14:30`). Do not include the tool name. Do not delete prior entries.
