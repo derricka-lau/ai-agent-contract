@@ -99,7 +99,7 @@
 
 ## Security — sensitive files
 - NEVER read, display, suggest edits to, or include content from these files:
-  - Environment: `.env`, `.env.*`, `.envrc`
+  - Environment: `.env`, `.env.local`, `.env.development`, `.env.production`, `.env.staging`, `.env.ci`, `.envrc` (excludes `.env.example`, `.env.sample`, `.env.template`)
   - App config: `settings_local.php`, `settings.ci.php`, `app_local.php`, `app.ci.php`
   - Keys/certs: `*.pem`, `*.key`, `id_rsa`, `id_ed25519`
   - Credentials: `.npmrc`, `.pypirc`, `.netrc`, `.aws/credentials`, `.azure/*`
