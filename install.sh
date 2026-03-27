@@ -92,13 +92,9 @@ if [ "$(uname)" = "Darwin" ]; then
   fi
 fi
 
-if npm list -g @anthropic-ai/claude-code &> /dev/null; then
-  echo "Claude Code CLI already installed."
-else
-  echo "Installing Claude Code CLI..."
-  npm install -g @anthropic-ai/claude-code
-  echo "Claude Code CLI installed."
-fi
+echo "Installing/updating Claude Code CLI to latest..."
+npm install -g @anthropic-ai/claude-code@latest
+echo "Claude Code CLI installed (latest)."
 
 # --- Codex CLI ---
 echo ""
@@ -120,13 +116,9 @@ cp "$SCRIPT_DIR/codex-safe" ~/.local/bin/codex-safe
 chmod +x ~/.local/bin/codex-safe
 echo "codex-safe wrapper installed."
 
-if npm list -g @openai/codex &> /dev/null; then
-  echo "Codex CLI already installed."
-else
-  echo "Installing Codex CLI..."
-  npm install -g @openai/codex
-  echo "Codex CLI installed."
-fi
+echo "Installing/updating Codex CLI to latest..."
+npm install -g @openai/codex@latest
+echo "Codex CLI installed (latest)."
 
 # --- GitHub Copilot (VS Code extension + CLI) ---
 echo ""
@@ -143,13 +135,9 @@ cp "$SCRIPT_DIR/copilot/memory/user_role.md" ~/.copilot/memory/user_role.md
 cp "$SCRIPT_DIR/prompts/workflow.md" ~/.copilot/prompts/workflow.md
 echo "Copilot CLI global instructions, AGENTS.md, memory, and workflow prompts installed."
 
-if npm list -g @github/copilot &> /dev/null; then
-  echo "Copilot CLI already installed."
-else
-  echo "Installing Copilot CLI..."
-  npm install -g @github/copilot
-  echo "Copilot CLI installed. Run 'copilot' then '/login' to authenticate."
-fi
+echo "Installing/updating Copilot CLI to latest..."
+npm install -g @github/copilot@latest
+echo "Copilot CLI installed (latest). Run 'copilot' then '/login' to authenticate."
 
 # --- Skills (shared across all three tools) ---
 echo ""
