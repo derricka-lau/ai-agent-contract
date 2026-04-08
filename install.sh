@@ -5,16 +5,58 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 # --- Preflight checks ---
 echo "=== Preflight checks ==="
-MISSING=""
-command -v git &> /dev/null || MISSING="$MISSING git"
-command -v node &> /dev/null || MISSING="$MISSING node"
-command -v npm &> /dev/null || MISSING="$MISSING npm"
-if [ -n "$MISSING" ]; then
-  echo "ERROR: Missing required tools:$MISSING"
-  echo "Install them before running this script."
+if ! command -v git &> /dev/null; then
+  echo "ERROR: Missing required tool: git"
+  echo "Install git before running this script."
   exit 1
 fi
-echo "All prerequisites found."
+echo "Git found."
+
+run_with_privilege() {
+  if [ "$(id -u)" -eq 0 ]; then
+    "$@"
+  elif command -v sudo &> /dev/null; then
+    sudo "$@"
+  else
+    echo "ERROR: This script needs root/sudo privileges to install missing packages."
+    exit 1
+  fi
+}
+
+ensure_node_npm() {
+  if command -v node &> /dev/null && command -v npm &> /dev/null; then
+    echo "Node/npm found."
+    return
+  fi
+
+  echo "Node/npm not found. Installing via apt-get..."
+  if ! command -v apt-get &> /dev/null; then
+    echo "ERROR: node/npm are missing and apt-get is unavailable in this environment."
+    exit 1
+  fi
+
+  run_with_privilege apt-get update
+  run_with_privilege apt-get install -y nodejs npm
+
+  if ! command -v node &> /dev/null || ! command -v npm &> /dev/null; then
+    echo "ERROR: node/npm installation failed."
+    exit 1
+  fi
+
+  echo "Node/npm installed."
+}
+
+ensure_node_npm
+
+install_npm_cli() {
+  local package="$1"
+  local label="$2"
+  local post_message="${3:-}"
+
+  echo "Installing/updating ${label} CLI to latest..."
+  npm install -g "${package}@latest"
+  echo "${label} CLI installed (latest).${post_message}"
+}
 
 echo ""
 echo "=== Installing dotfiles ==="
@@ -92,9 +134,7 @@ if [ "$(uname)" = "Darwin" ]; then
   fi
 fi
 
-echo "Installing/updating Claude Code CLI to latest..."
-npm install -g @anthropic-ai/claude-code@latest
-echo "Claude Code CLI installed (latest)."
+install_npm_cli "@anthropic-ai/claude-code" "Claude Code"
 
 # --- Codex CLI ---
 echo ""
@@ -116,9 +156,7 @@ cp "$SCRIPT_DIR/codex-safe" ~/.local/bin/codex-safe
 chmod +x ~/.local/bin/codex-safe
 echo "codex-safe wrapper installed."
 
-echo "Installing/updating Codex CLI to latest..."
-npm install -g @openai/codex@latest
-echo "Codex CLI installed (latest)."
+install_npm_cli "@openai/codex" "Codex"
 
 # --- GitHub Copilot (VS Code extension + CLI) ---
 echo ""
@@ -135,9 +173,7 @@ cp "$SCRIPT_DIR/copilot/memory/user_role.md" ~/.copilot/memory/user_role.md
 cp "$SCRIPT_DIR/prompts/workflow.md" ~/.copilot/prompts/workflow.md
 echo "Copilot CLI global instructions, AGENTS.md, memory, and workflow prompts installed."
 
-echo "Installing/updating Copilot CLI to latest..."
-npm install -g @github/copilot@latest
-echo "Copilot CLI installed (latest). Run 'copilot' then '/login' to authenticate."
+install_npm_cli "@github/copilot" "Copilot" " Run 'copilot' then '/login' to authenticate."
 
 # --- Skills (shared across all three tools) ---
 echo ""
