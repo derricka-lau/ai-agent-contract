@@ -3,7 +3,7 @@ name: reviewer
 description: Code reviewer — read-only analysis of diffs, tests, and architecture. Use for PR reviews, branch comparisons, and code audits.
 tools: Read, Glob, Grep, Bash(git diff:*), Bash(git log:*), Bash(git show:*), Bash(git blame:*)
 model: opus
-effort: high
+effort: max
 maxTurns: 20
 disallowedTools: Write, Edit, MultiEdit, NotebookEdit
 ---

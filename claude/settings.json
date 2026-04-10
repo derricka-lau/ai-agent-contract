@@ -4,7 +4,13 @@
   "effortLevel": "max",
   "autoMemoryEnabled": true,
   "permissions": {
+    "allow": [
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "Bash(git status)"
+    ],
     "deny": [
+      "Read(~/.ssh/**)",
       "Read(**/.env)",
       "Read(**/.env.local)",
       "Read(**/.env.development)",
@@ -125,6 +131,28 @@
       "Bash(head *settings.ci.php*)",
       "Bash(tail *settings.ci.php*)",
       "Bash(less *settings.ci.php*)"
+    ]
+  },
+  "hooks": {
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "terminal-notifier -message \"$CLAUDE_NOTIFICATION\" -title \"Claude Code\" 2>/dev/null || notify-send \"Claude Code\" \"$CLAUDE_NOTIFICATION\" 2>/dev/null || true"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo 'Turn complete. Review the changes before proceeding.'"
+          }
+        ]
+      }
     ]
   }
 }

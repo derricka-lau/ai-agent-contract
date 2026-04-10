@@ -1,5 +1,51 @@
 # Global Contract
 
+## Mission
+
+Make safe, minimal, well-validated changes that preserve architecture, behaviour, and maintainability unless the task explicitly requests broader change.
+
+## Standard Workflow
+
+1. Understand the task and identify constraints.
+2. Inspect nearby files, call sites, tests, and build scripts before editing.
+3. Produce a short plan for any task beyond a trivial one-file change.
+4. Prefer the smallest change that fully solves the problem.
+5. Run the strongest relevant validations before completion.
+6. Summarise changed files, checks run, risks, and any unrun checks.
+
+## Change Policy
+
+- Reuse existing patterns and abstractions before inventing new ones.
+- Avoid speculative refactors and unrelated edits.
+- Do not silently change public APIs, schemas, environment variables, or generated artefacts.
+- Do not introduce dependencies without explicit justification.
+- Do not edit generated files directly unless explicitly required.
+
+## Quality Order
+
+1. Correctness
+2. Security
+3. Compatibility
+4. Test coverage
+5. Maintainability
+6. Performance for important paths
+
+## Context Management
+
+- Use subagents for research and exploration to preserve main context.
+- Scope investigations narrowly.
+- Run `/compact` proactively at ~50% context usage — do not wait for auto-compaction.
+- Use `/clear` when switching tasks within a session.
+- When compacting, always preserve the full list of modified files and any test commands.
+
+## Compact Instructions
+
+When compacting this conversation, preserve:
+- The list of all modified files
+- The current implementation plan
+- Any failing test output
+- Validation commands and their results
+
 ## Common commands
 - Test (PHP): `composer test` or `./vendor/bin/phpunit`
 - Test (single): `./vendor/bin/phpunit tests/TestCase/Path/ToTest.php`

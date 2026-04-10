@@ -24,7 +24,10 @@ dotfiles/
 │   ├── memory/
 │   │   └── user_role.md           # User context
 │   └── agents/
-│       └── reviewer.md            # Read-only code review subagent
+│       ├── architect.md           # Planning/mapping subagent (opus, read-only)
+│       ├── implementer.md         # Focused implementation subagent (sonnet)
+│       ├── reviewer.md            # Read-only code review subagent
+│       └── security-reviewer.md   # Security audit subagent (opus, read-only)
 ├── codex/
 │   ├── config.toml                # Global defaults + hardened profiles + hooks/features
 │   ├── AGENTS.md                  # Global contract + workflow + safety rules
@@ -81,6 +84,8 @@ dotfiles/
 ## Scope
 
 This repo manages user-level defaults only.
+
+It does not create project-scoped Claude Code files such as a repo-root `CLAUDE.md`, `CLAUDE.local.md`, `.claude/settings.json` (project-level), `.claude/settings.local.json`, `.claude/rules/`, `.claude/skills/` (project-level), `.mcp.json`, or sandbox/worktree configuration inside individual repositories.
 
 It does not create project-scoped Codex files such as a repo-root `AGENTS.md`, `.codex/config.toml`, `.codex/hooks.json`, or `.agents/skills/` inside individual repositories.
 
@@ -184,7 +189,7 @@ Blocked files:
 | 8 | Shared memory + prompts | Memory index, user role, and `prompts/workflow.md` present for Claude, Codex, Copilot |
 | 9 | Git conditional email | `hasconfig:remote` in `~/.gitconfig` |
 | 10 | Skills (all tools) | At least 12 skills in each of `~/.claude/skills/`, `~/.codex/skills/`, `~/.copilot/skills/` |
-| 11 | Subagents (Claude + Codex) | `reviewer.md` in `~/.claude/agents/`, plus `explorer.toml`, `implementer.toml`, `reviewer.toml`, `security.toml` in `~/.codex/agents/` |
+| 11 | Subagents (Claude + Codex) | `architect.md`, `implementer.md`, `reviewer.md`, `security-reviewer.md` in `~/.claude/agents/`, plus `explorer.toml`, `implementer.toml`, `reviewer.toml`, `security.toml` in `~/.codex/agents/` |
 | 12 | Copilot AGENTS.md | `~/.copilot/AGENTS.md` present |
 | 13 | Claude managed settings (optional) | `disableBypassPermissionsMode` in managed-settings.json |
 

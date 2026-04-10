@@ -231,11 +231,11 @@ else
 fi
 
 # 11. Subagents (Claude Code + Codex)
-if [ -f ~/.claude/agents/reviewer.md ] && [ -f ~/.codex/agents/explorer.toml ] && [ -f ~/.codex/agents/implementer.toml ] && [ -f ~/.codex/agents/reviewer.toml ] && [ -f ~/.codex/agents/security.toml ]; then
-  echo "  [PASS] Subagents installed (Claude reviewer + Codex explorer/implementer/reviewer/security)"
+if [ -f ~/.claude/agents/reviewer.md ] && [ -f ~/.claude/agents/architect.md ] && [ -f ~/.claude/agents/implementer.md ] && [ -f ~/.claude/agents/security-reviewer.md ] && [ -f ~/.codex/agents/explorer.toml ] && [ -f ~/.codex/agents/implementer.toml ] && [ -f ~/.codex/agents/reviewer.toml ] && [ -f ~/.codex/agents/security.toml ]; then
+  echo "  [PASS] Subagents installed (Claude architect/implementer/reviewer/security-reviewer + Codex explorer/implementer/reviewer/security)"
   PASS=$((PASS+1))
 else
-  echo "  [FAIL] Subagents missing (Claude reviewer and/or Codex agents)"
+  echo "  [FAIL] Subagents missing (Claude and/or Codex agents)"
   FAIL=$((FAIL+1))
 fi
 
