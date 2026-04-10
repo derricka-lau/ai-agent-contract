@@ -189,7 +189,7 @@ else
 fi
 
 # 7. Copilot instructions present (VS Code extension + CLI)
-if [ -f ~/.copilot/instructions/global-contract.instructions.md ] && [ -f ~/.copilot/copilot-instructions.md ]; then
+if [ -f ~/.copilot/instructions/global-contract.instructions.md ] && [ -f ~/.copilot/instructions/backend.instructions.md ] && [ -f ~/.copilot/instructions/frontend.instructions.md ] && [ -f ~/.copilot/instructions/tests.instructions.md ] && [ -f ~/.copilot/copilot-instructions.md ]; then
   echo "  [PASS] Copilot instructions present (extension + CLI)"
   PASS=$((PASS+1))
 else
@@ -222,11 +222,11 @@ CLAUDE_SKILLS=$(ls -1d ~/.claude/skills/*/SKILL.md 2>/dev/null | wc -l | tr -d '
 CODEX_SKILLS=$(ls -1d ~/.codex/skills/*/SKILL.md 2>/dev/null | wc -l | tr -d ' ')
 CODEX_COMPAT_SKILLS=$(ls -1d ~/.agents/skills/*/SKILL.md 2>/dev/null | wc -l | tr -d ' ')
 COPILOT_SKILLS=$(ls -1d ~/.copilot/skills/*/SKILL.md 2>/dev/null | wc -l | tr -d ' ')
-if [ "$CLAUDE_SKILLS" -ge 11 ] && [ "$CODEX_SKILLS" -ge 11 ] && [ "$COPILOT_SKILLS" -ge 11 ]; then
+if [ "$CLAUDE_SKILLS" -ge 12 ] && [ "$CODEX_SKILLS" -ge 12 ] && [ "$COPILOT_SKILLS" -ge 12 ]; then
   echo "  [PASS] Skills installed: Claude($CLAUDE_SKILLS) Codex($CODEX_SKILLS) Copilot($COPILOT_SKILLS) CompatibilityMirror($CODEX_COMPAT_SKILLS)"
   PASS=$((PASS+1))
 else
-  echo "  [FAIL] Skills missing: Claude($CLAUDE_SKILLS) Codex($CODEX_SKILLS) Copilot($COPILOT_SKILLS) — expected at least 11 each"
+  echo "  [FAIL] Skills missing: Claude($CLAUDE_SKILLS) Codex($CODEX_SKILLS) Copilot($COPILOT_SKILLS) — expected at least 12 each"
   FAIL=$((FAIL+1))
 fi
 
@@ -281,7 +281,6 @@ for f in \
   ~/.local/bin/codex-safe \
   ~/.copilot/copilot-instructions.md \
   ~/.copilot/AGENTS.md \
-  ~/.copilot/instructions/global-contract.instructions.md \
   ~/.copilot/MEMORY.md \
   ~/.copilot/memory/user_role.md \
   ~/.copilot/prompts/workflow.md \
@@ -290,6 +289,12 @@ for f in \
   "/Library/Application Support/ClaudeCode/managed-settings.json"; do
   if [ -f "$f" ]; then
     shasum -a 256 "$f" >> "$MANIFEST"
+  fi
+done
+
+for instruction_file in ~/.copilot/instructions/*.instructions.md; do
+  if [ -f "$instruction_file" ]; then
+    shasum -a 256 "$instruction_file" >> "$MANIFEST"
   fi
 done
 

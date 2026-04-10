@@ -75,7 +75,9 @@ safe_rm ~/.local/bin/codex-safe
 echo "Codex done."
 
 # Copilot (extension + CLI)
-safe_rm ~/.copilot/instructions/global-contract.instructions.md
+for instruction_file in ~/.copilot/instructions/*.instructions.md; do
+  [ -f "$instruction_file" ] && safe_rm "$instruction_file"
+done
 safe_rm ~/.copilot/copilot-instructions.md
 safe_rm ~/.copilot/AGENTS.md
 safe_rm ~/.copilot/MEMORY.md

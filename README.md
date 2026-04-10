@@ -47,12 +47,16 @@ dotfiles/
 │   ├── memory/
 │   │   └── user_role.md           # Shared user context
 │   └── instructions/
-│       └── global-contract.instructions.md  # VS Code extension (applyTo: "**")
+│       ├── global-contract.instructions.md  # VS Code extension global defaults
+│       ├── backend.instructions.md          # Backend-specific guidance
+│       ├── frontend.instructions.md         # Frontend-specific guidance
+│       └── tests.instructions.md            # Test-file guidance
 ├── skills/                        # Shared skills (deployed to all three tools)
 │   ├── repo-mapper/               # Repository mapping workflow
 │   ├── implement-change/          # Minimal diff implementation workflow
 │   ├── test-and-validate/         # Validation order and reporting
 │   ├── review-risk/               # Risk review checklist
+│   ├── test-strategy/             # Test planning and escalation
 │   ├── web-search-rag-deep/       # Exhaustive multi-pass web search (5-10+ searches)
 │   ├── web-search-rag-quick/      # Fast lean web search (1-3 searches)
 │   ├── web-search-rag-official-deep/   # Multi-pass targeting official sources
@@ -79,6 +83,8 @@ dotfiles/
 This repo manages user-level defaults only.
 
 It does not create project-scoped Codex files such as a repo-root `AGENTS.md`, `.codex/config.toml`, `.codex/hooks.json`, or `.agents/skills/` inside individual repositories.
+
+It also does not create project-scoped Copilot files such as repo-root `AGENTS.md`, `.github/copilot-instructions.md`, `.github/instructions/`, `.github/agents/`, `.github/skills/`, or `.github/hooks/` inside individual repositories.
 
 ## Setup
 
@@ -174,10 +180,10 @@ Blocked files:
 | 4 | codex-safe wrapper | Executable at `~/.local/bin/codex-safe` |
 | 5 | codex-safe blocks unapproved profiles | `codex-safe --profile foo` exits 64 |
 | 6 | Codex hooks | `~/.codex/hooks.json` and hook scripts present |
-| 7 | Copilot instructions | Extension + CLI instructions both present in `~/.copilot/` |
+| 7 | Copilot instructions | Global, backend, frontend, tests, and CLI instructions present in `~/.copilot/` |
 | 8 | Shared memory + prompts | Memory index, user role, and `prompts/workflow.md` present for Claude, Codex, Copilot |
 | 9 | Git conditional email | `hasconfig:remote` in `~/.gitconfig` |
-| 10 | Skills (all tools) | At least 11 skills in each of `~/.claude/skills/`, `~/.codex/skills/`, `~/.copilot/skills/` |
+| 10 | Skills (all tools) | At least 12 skills in each of `~/.claude/skills/`, `~/.codex/skills/`, `~/.copilot/skills/` |
 | 11 | Subagents (Claude + Codex) | `reviewer.md` in `~/.claude/agents/`, plus `explorer.toml`, `implementer.toml`, `reviewer.toml`, `security.toml` in `~/.codex/agents/` |
 | 12 | Copilot AGENTS.md | `~/.copilot/AGENTS.md` present |
 | 13 | Claude managed settings (optional) | `disableBypassPermissionsMode` in managed-settings.json |
@@ -220,6 +226,7 @@ Skills are deployed to `~/.claude/skills/`, `~/.codex/skills/`, and `~/.copilot/
 | `implement-change` | Minimal-diff implementation workflow |
 | `test-and-validate` | Validation order and reporting |
 | `review-risk` | High-value risk review before completion |
+| `test-strategy` | Test planning and escalation for changed areas |
 | `php-cakephp` | PHP/CakePHP conventions, testing patterns, PSR-12, strict types |
 | `python` | Type hints, f-strings, pytest, pathlib |
 | `typescript-react` | Strict TS, functional components, named exports |

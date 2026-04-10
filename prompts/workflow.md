@@ -200,6 +200,36 @@ Your job:
 4. If Copilot is the wrong tool, tell me which tool should handle it instead and why.
 ```
 
+## 8. Copilot — `/fleet` parallel task
+
+```
+/fleet Read AGENTS.md and all Copilot instruction files first.
+
+Task:
+[describe the multi-file task]
+
+Requirements:
+- Use parallel workers only where the work is naturally separable
+- Many readers, one writer
+- Do not let multiple agents write the same file concurrently
+- Return a consolidated plan before broad edits
+- Preserve architecture unless explicitly requested
+- Prefer minimal diffs
+- Run or recommend strongest validations
+
+Use:
+- planning / architecture lane for impact mapping
+- implementation lane for code changes
+- verification lane for regressions and missing tests
+- security lane for trust-boundary and secrets review
+
+Return:
+- consolidated plan
+- files likely to change
+- validation commands
+- risks and assumptions
+```
+
 ## Quick reference
 
 | Need | Tool |
@@ -207,5 +237,6 @@ Your job:
 | Plan, diagnose, review | Claude Code (#2, #6) |
 | Hand off context | Claude Code (#3) |
 | Long "keep going until done" | Copilot agent mode (#4) |
+| Parallel multi-file task | Copilot `/fleet` (#8) |
 | Short bounded edit | Codex CLI (#5) |
 | Copilot failed | Back to Claude Code (#7) |
