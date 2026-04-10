@@ -4,7 +4,7 @@ service_tier = "fast"
 sandbox_mode = "workspace-write"
 approval_policy = "on-request"
 web_search = "cached"
-notify = "terminal-notifier -message 'Codex turn complete' -title 'Codex'"
+notify = ["terminal-notifier", "-message", "Codex turn complete", "-title", "Codex"]
 default_permissions = "global_lockdown"
 
 [notice.model_migrations]
@@ -25,7 +25,7 @@ service_tier = "fast"
 sandbox_mode = "workspace-write"
 approval_policy = "on-request"
 web_search = "cached"
-notify = "terminal-notifier -message 'Codex turn complete' -title 'Codex'"
+notify = ["terminal-notifier", "-message", "Codex turn complete", "-title", "Codex"]
 permissions_profile = "global_lockdown"
 
 [profiles.deep]
