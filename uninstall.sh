@@ -62,10 +62,14 @@ echo "Claude Code done."
 safe_rm ~/.codex/config.toml
 safe_rm ~/.codex/AGENTS.md
 safe_rm ~/.codex/MEMORY.md
+safe_rm ~/.codex/hooks.json
 safe_rm ~/.codex/memory/user_role.md
 safe_rm ~/.codex/prompts/workflow.md
 for agent_file in ~/.codex/agents/*.toml; do
   [ -f "$agent_file" ] && safe_rm "$agent_file"
+done
+for hook_file in ~/.codex/hooks/*.sh; do
+  [ -f "$hook_file" ] && safe_rm "$hook_file"
 done
 safe_rm ~/.local/bin/codex-safe
 echo "Codex done."
@@ -80,7 +84,7 @@ safe_rm ~/.copilot/prompts/workflow.md
 echo "Copilot done."
 
 # Skills (all three tools)
-for skill_file in ~/.claude/skills/*/SKILL.md ~/.agents/skills/*/SKILL.md ~/.copilot/skills/*/SKILL.md; do
+for skill_file in ~/.claude/skills/*/SKILL.md ~/.codex/skills/*/SKILL.md ~/.agents/skills/*/SKILL.md ~/.copilot/skills/*/SKILL.md; do
   [ -f "$skill_file" ] && safe_rm "$skill_file"
 done
 echo "Skills done."

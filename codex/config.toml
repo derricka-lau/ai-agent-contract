@@ -1,17 +1,58 @@
-model = "gpt-5.3-codex"
-model_reasoning_effort = "xhigh"
+model = "gpt-5.4"
+model_reasoning_effort = "high"
+service_tier = "fast"
+sandbox_mode = "workspace-write"
+approval_policy = "on-request"
+web_search = "cached"
+notify = "terminal-notifier -message 'Codex turn complete' -title 'Codex'"
 default_permissions = "global_lockdown"
-
-# Global default profile for hardened local runs.
-profile = "secure-global"
-
-[projects."/Users/forkalau/Desktop/pj/profiles"]
-trust_level = "trusted"
 
 [notice.model_migrations]
 "gpt-5.3-codex" = "gpt-5.4"
 
+[sandbox_workspace_write]
+network_access = false
+
+[features]
+codex_hooks = true
+multi_agent = true
+shell_snapshot = true
+
 [profiles.secure-global]
+model = "gpt-5.4"
+model_reasoning_effort = "high"
+service_tier = "fast"
+sandbox_mode = "workspace-write"
+approval_policy = "on-request"
+web_search = "cached"
+notify = "terminal-notifier -message 'Codex turn complete' -title 'Codex'"
+permissions_profile = "global_lockdown"
+
+[profiles.deep]
+model = "gpt-5.4"
+model_reasoning_effort = "high"
+service_tier = "fast"
+approval_policy = "never"
+sandbox_mode = "workspace-write"
+web_search = "cached"
+permissions_profile = "global_lockdown"
+
+[profiles.quick]
+model = "gpt-5.4-mini"
+model_reasoning_effort = "medium"
+service_tier = "fast"
+sandbox_mode = "workspace-write"
+approval_policy = "on-request"
+web_search = "cached"
+permissions_profile = "global_lockdown"
+
+[profiles.verify]
+model = "gpt-5.4"
+model_reasoning_effort = "high"
+service_tier = "fast"
+sandbox_mode = "workspace-write"
+approval_policy = "on-request"
+web_search = "cached"
 permissions_profile = "global_lockdown"
 
 [tui]
