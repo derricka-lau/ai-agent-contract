@@ -106,6 +106,17 @@ cp "$SCRIPT_DIR/gitconfig" ~/.gitconfig
 cp "$SCRIPT_DIR/gitconfig-github" ~/.gitconfig-github
 echo "Git config installed (Cardiff email default, GitHub noreply for github.com remotes)."
 
+# --- Git hooks (global template) ---
+echo ""
+echo "--- Git hooks ---"
+GIT_HOOKS_DIR="$HOME/.git-hooks"
+mkdir -p "$GIT_HOOKS_DIR"
+cp "$SCRIPT_DIR/hooks/pre-commit" "$GIT_HOOKS_DIR/pre-commit"
+cp "$SCRIPT_DIR/hooks/pre-push" "$GIT_HOOKS_DIR/pre-push"
+chmod +x "$GIT_HOOKS_DIR/pre-commit" "$GIT_HOOKS_DIR/pre-push"
+git config --global core.hooksPath "$GIT_HOOKS_DIR"
+echo "Git hooks installed globally (core.hooksPath = $GIT_HOOKS_DIR)."
+
 # Detect the user's actual shell rc file
 case "$SHELL" in
   */zsh)  SHELL_RC="$HOME/.zshrc" ;;
@@ -248,7 +259,17 @@ else
   FAIL=$((FAIL+1))
 fi
 
-# 13. Claude Code managed settings (bypass disabled)
+# 13. Git hooks (global)
+HOOKS_PATH="$(git config --global core.hooksPath 2>/dev/null || true)"
+if [ -n "$HOOKS_PATH" ] && [ -x "$HOOKS_PATH/pre-commit" ] && [ -x "$HOOKS_PATH/pre-push" ]; then
+  echo "  [PASS] Git hooks installed globally (pre-commit + pre-push at $HOOKS_PATH)"
+  PASS=$((PASS+1))
+else
+  echo "  [FAIL] Git hooks missing or not executable"
+  FAIL=$((FAIL+1))
+fi
+
+# 14. Claude Code managed settings (bypass disabled)
 if [ -f "/Library/Application Support/ClaudeCode/managed-settings.json" ] && grep -q 'disableBypassPermissionsMode' "/Library/Application Support/ClaudeCode/managed-settings.json" 2>/dev/null; then
   echo "  [PASS] Claude Code bypass permissions disabled (managed settings)"
   PASS=$((PASS+1))
@@ -289,6 +310,12 @@ for f in \
   "/Library/Application Support/ClaudeCode/managed-settings.json"; do
   if [ -f "$f" ]; then
     shasum -a 256 "$f" >> "$MANIFEST"
+  fi
+done
+
+for hook_file in ~/.git-hooks/pre-commit ~/.git-hooks/pre-push; do
+  if [ -f "$hook_file" ]; then
+    shasum -a 256 "$hook_file" >> "$MANIFEST"
   fi
 done
 
