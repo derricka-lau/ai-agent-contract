@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Pre-commit hook: runs lint and type-check on staged changes.
+# Detects project type automatically.
+
+echo "[pre-commit] Running lint and type-check..."
+
+RAN=0
+
+# PHP
+if [ -f composer.json ]; then
+  if grep -q '"cs-check"' composer.json 2>/dev/null; then
+    echo "[pre-commit] PHP: composer cs-check"
+    composer cs-check
+    RAN=1
+  elif [ -x vendor/bin/phpcs ]; then
+    echo "[pre-commit] PHP: phpcs"
+    ./vendor/bin/phpcs
+    RAN=1
+  fi
+  if grep -q '"stan"' composer.json 2>/dev/null; then
+    echo "[pre-commit] PHP: composer stan"
+    composer stan
+    RAN=1
+  elif [ -x vendor/bin/phpstan ]; then
+    echo "[pre-commit] PHP: phpstan analyse"
+    ./vendor/bin/phpstan analyse
+    RAN=1
+  fi
+fi
+
+# Python
+if [ -f pyproject.toml ] || [ -f setup.py ] || [ -f requirements.txt ]; then
+  if command -v ruff &>/dev/null; then
+    echo "[pre-commit] Python: ruff check"
+    ruff check .
+    RAN=1
+  elif command -v flake8 &>/dev/null; then
+    echo "[pre-commit] Python: flake8"
+    flake8 .
+    RAN=1
+  fi
+  if command -v mypy &>/dev/null; then
+    echo "[pre-commit] Python: mypy"
+    mypy .
+    RAN=1
+  fi
+fi
+
+# JavaScript / TypeScript
+if [ -f package.json ]; then
+  if grep -q '"lint"' package.json 2>/dev/null; then
+    echo "[pre-commit] JS/TS: npm run lint"
+    npm run lint
+    RAN=1
+  fi
+  if grep -q '"typecheck"' package.json 2>/dev/null; then
+    echo "[pre-commit] JS/TS: npm run typecheck"
+    npm run typecheck
+    RAN=1
+  elif [ -f tsconfig.json ] && command -v npx &>/dev/null; then
+    echo "[pre-commit] TS: npx tsc --noEmit"
+    npx tsc --noEmit
+    RAN=1
+  fi
+fi
+
+if [ "$RAN" -eq 0 ]; then
+  echo "[pre-commit] No lint/typecheck tools detected — skipping."
+fi
+
+echo "[pre-commit] Done."

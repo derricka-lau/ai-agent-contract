@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Pre-push hook: runs the full test suite before allowing a push.
+# Detects project type automatically.
+
+echo "[pre-push] Running tests before push..."
+
+RAN=0
+
+# PHP
+if [ -f composer.json ]; then
+  if grep -q '"test"' composer.json 2>/dev/null; then
+    echo "[pre-push] PHP: composer test"
+    composer test
+    RAN=1
+  elif [ -x vendor/bin/phpunit ]; then
+    echo "[pre-push] PHP: phpunit"
+    ./vendor/bin/phpunit
+    RAN=1
+  fi
+fi
+
+# Python
+if [ -f pyproject.toml ] || [ -f setup.py ] || [ -f requirements.txt ]; then
+  if command -v pytest &>/dev/null; then
+    echo "[pre-push] Python: pytest"
+    pytest
+    RAN=1
+  elif [ -d .venv ] && [ -x .venv/bin/pytest ]; then
+    echo "[pre-push] Python: .venv pytest"
+    .venv/bin/pytest
+    RAN=1
+  fi
+fi
+
+# JavaScript / TypeScript
+if [ -f package.json ]; then
+  if grep -q '"test"' package.json 2>/dev/null; then
+    echo "[pre-push] JS/TS: npm test"
+    npm test
+    RAN=1
+  fi
+fi
+
+if [ "$RAN" -eq 0 ]; then
+  echo "[pre-push] No test tools detected — skipping."
+fi
+
+echo "[pre-push] Done. All tests passed."

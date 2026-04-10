@@ -118,6 +118,13 @@
 - If you notice something worth fixing outside the current task, mention it at the end — do not fix it. The user decides whether to act on it.
 - If there is nothing to flag, say nothing. Do not invent suggestions.
 
+## Test-driven development
+- Write a failing test before writing implementation code (red-green-refactor).
+- Do not write production code without a corresponding test that fails first.
+- If modifying existing behaviour, write the test that captures the new expectation before changing the code.
+- After tests pass, refactor if needed while keeping tests green.
+- If the user explicitly requests skipping TDD, comply — but default to tests-first.
+
 ## Verification
 - Definition of Done: tests + lint + type-check + static analysis must all pass before claiming success. If any fail, report the exact blocker.
 - Do not report passing status without evidence from real command output.
