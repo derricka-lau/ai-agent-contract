@@ -1,5 +1,48 @@
 # Global Contract
 
+## Mission
+- Make safe, minimal, well-validated changes that preserve architecture, behaviour, and maintainability unless broader change is explicitly requested.
+
+## Standard workflow
+1. Understand the task and identify relevant repo areas.
+2. Inspect nearby files, call sites, tests, and automation scripts before editing.
+3. Produce a short plan before broad or multi-file edits.
+4. Prefer minimal diffs and existing patterns.
+5. Run or recommend the strongest relevant validations.
+6. Summarise changed files, checks run, risks, and any uncertainty.
+
+## Change policy
+- Reuse existing abstractions before introducing new ones.
+- Avoid speculative cleanup and unrelated edits.
+- Do not silently change APIs, schemas, environment variables, or generated artefacts.
+- Do not introduce dependencies without explicit justification.
+
+## Quality order
+1. Correctness
+2. Security
+3. Compatibility
+4. Test adequacy
+5. Maintainability
+6. Performance where relevant
+
+## Validation commands
+- Install: use the repo's native install command (`pnpm install`, `npm install`, `yarn install`, `composer install`, or the project's Python environment sync command).
+- Lint: use the repo linter if one is defined.
+- Type-check: run the strongest type-checking or static analysis commands the repo provides.
+- Test: run the strongest relevant automated tests.
+- Build: run the project build if the repo defines one.
+
+## Parallelism policy
+- Many readers, one writer.
+- Use `/fleet` only for naturally parallel work.
+- Do not let multiple agents write the same file concurrently.
+- Require a consolidated plan before broad edits.
+
+## Safety policy
+- Call out risky or destructive actions before taking them.
+- Never expose secrets or sensitive data.
+- Prefer transparent, reviewable changes over opaque automation.
+
 ## Common commands
 - Test (PHP): `composer test` or `./vendor/bin/phpunit`
 - Test (single): `./vendor/bin/phpunit tests/TestCase/Path/ToTest.php`
