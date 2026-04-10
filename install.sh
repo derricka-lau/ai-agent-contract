@@ -48,16 +48,6 @@ ensure_node_npm() {
 
 ensure_node_npm
 
-install_npm_cli() {
-  local package="$1"
-  local label="$2"
-  local post_message="${3:-}"
-
-  echo "Installing/updating ${label} CLI to latest..."
-  npm install -g "${package}@latest"
-  echo "${label} CLI installed (latest).${post_message}"
-}
-
 echo ""
 echo "=== Installing dotfiles ==="
 echo "NOTE: All existing config files will be overwritten (not merged)."
@@ -75,9 +65,11 @@ for f in \
   ~/.codex/config.toml \
   ~/.codex/AGENTS.md \
   ~/.codex/MEMORY.md \
+  ~/.codex/hooks.json \
   ~/.codex/memory/user_role.md \
   ~/.codex/prompts/workflow.md \
   ~/.codex/agents/*.toml \
+  ~/.codex/hooks/*.sh \
   ~/.copilot/instructions/*.instructions.md \
   ~/.copilot/copilot-instructions.md \
   ~/.copilot/AGENTS.md \
@@ -85,6 +77,7 @@ for f in \
   ~/.copilot/memory/user_role.md \
   ~/.copilot/prompts/workflow.md \
   ~/.claude/skills/*/SKILL.md \
+  ~/.codex/skills/*/SKILL.md \
   ~/.agents/skills/*/SKILL.md \
   ~/.copilot/skills/*/SKILL.md \
   ~/.gitconfig \
@@ -102,102 +95,9 @@ if [ "$BACKED_UP" = true ]; then
   echo "Backup complete. Restore with: cp $BACKUP_DIR/* to their original locations."
 fi
 
-# --- Claude Code ---
-echo ""
-echo "--- Claude Code ---"
-mkdir -p ~/.claude/memory ~/.claude/prompts ~/.claude/agents
-cp "$SCRIPT_DIR/claude/settings.json" ~/.claude/settings.json
-cp "$SCRIPT_DIR/claude/CLAUDE.md" ~/.claude/CLAUDE.md
-cp "$SCRIPT_DIR/claude/MEMORY.md" ~/.claude/MEMORY.md
-cp "$SCRIPT_DIR/claude/memory/user_role.md" ~/.claude/memory/user_role.md
-cp "$SCRIPT_DIR/prompts/workflow.md" ~/.claude/prompts/workflow.md
-# Subagents
-for agent_file in "$SCRIPT_DIR"/claude/agents/*.md; do
-  [ -f "$agent_file" ] && cp "$agent_file" ~/.claude/agents/
-done
-echo "Claude Code settings, instructions, memory, and subagents installed."
-
-# Skills are installed per-tool after all tool sections (see below)
-
-# Managed settings (system-level, disables --dangerously-skip-permissions)
-MANAGED_DIR="/Library/Application Support/ClaudeCode"
-MANAGED_FILE="$MANAGED_DIR/managed-settings.json"
-if [ "$(uname)" = "Darwin" ]; then
-  if [ -w "$MANAGED_DIR" ] 2>/dev/null || [ -w "$(dirname "$MANAGED_DIR")" ]; then
-    mkdir -p "$MANAGED_DIR"
-    cp "$SCRIPT_DIR/claude/managed-settings.json" "$MANAGED_FILE"
-    echo "Claude Code managed settings installed (bypass permissions disabled)."
-  else
-    echo "NOTE: Installing managed settings requires sudo."
-    echo "  Run: sudo mkdir -p \"$MANAGED_DIR\" && sudo cp \"$SCRIPT_DIR/claude/managed-settings.json\" \"$MANAGED_FILE\""
-    echo "  This disables --dangerously-skip-permissions at the system level."
-  fi
-fi
-
-install_npm_cli "@anthropic-ai/claude-code" "Claude Code"
-
-# --- Codex CLI ---
-echo ""
-echo "--- Codex CLI ---"
-mkdir -p ~/.codex/memory ~/.codex/prompts ~/.codex/agents
-cp "$SCRIPT_DIR/codex/config.toml" ~/.codex/config.toml
-cp "$SCRIPT_DIR/codex/AGENTS.md" ~/.codex/AGENTS.md
-cp "$SCRIPT_DIR/codex/MEMORY.md" ~/.codex/MEMORY.md
-cp "$SCRIPT_DIR/codex/memory/user_role.md" ~/.codex/memory/user_role.md
-cp "$SCRIPT_DIR/prompts/workflow.md" ~/.codex/prompts/workflow.md
-# Subagents
-for agent_file in "$SCRIPT_DIR"/codex/agents/*.toml; do
-  [ -f "$agent_file" ] && cp "$agent_file" ~/.codex/agents/
-done
-echo "Codex config, instructions, memory, workflow prompts, and subagents installed."
-
-mkdir -p ~/.local/bin
-cp "$SCRIPT_DIR/codex-safe" ~/.local/bin/codex-safe
-chmod +x ~/.local/bin/codex-safe
-echo "codex-safe wrapper installed."
-
-install_npm_cli "@openai/codex" "Codex"
-
-# --- GitHub Copilot (VS Code extension + CLI) ---
-echo ""
-echo "--- GitHub Copilot ---"
-# VS Code extension instructions
-mkdir -p ~/.copilot/instructions ~/.copilot/memory ~/.copilot/prompts
-cp "$SCRIPT_DIR"/copilot/instructions/*.instructions.md ~/.copilot/instructions/
-echo "Copilot VS Code extension instructions installed."
-# CLI global instructions + AGENTS.md
-cp "$SCRIPT_DIR/copilot/copilot-instructions.md" ~/.copilot/copilot-instructions.md
-cp "$SCRIPT_DIR/copilot/AGENTS.md" ~/.copilot/AGENTS.md
-cp "$SCRIPT_DIR/copilot/MEMORY.md" ~/.copilot/MEMORY.md
-cp "$SCRIPT_DIR/copilot/memory/user_role.md" ~/.copilot/memory/user_role.md
-cp "$SCRIPT_DIR/prompts/workflow.md" ~/.copilot/prompts/workflow.md
-echo "Copilot CLI global instructions, AGENTS.md, memory, and workflow prompts installed."
-
-install_npm_cli "@github/copilot" "Copilot" " Run 'copilot' then '/login' to authenticate."
-
-# --- Skills (shared across all three tools) ---
-echo ""
-echo "--- Skills ---"
-if [ -d "$SCRIPT_DIR/skills" ]; then
-  SKILL_NAMES=""
-  for skill_dir in "$SCRIPT_DIR"/skills/*/; do
-    skill_name="$(basename "$skill_dir")"
-    SKILL_NAMES="$SKILL_NAMES $skill_name"
-
-    # Claude Code: ~/.claude/skills/<name>/SKILL.md
-    mkdir -p ~/.claude/skills/"$skill_name"
-    cp "$skill_dir"SKILL.md ~/.claude/skills/"$skill_name"/SKILL.md
-
-    # Codex CLI: ~/.agents/skills/<name>/SKILL.md
-    mkdir -p ~/.agents/skills/"$skill_name"
-    cp "$skill_dir"SKILL.md ~/.agents/skills/"$skill_name"/SKILL.md
-
-    # GitHub Copilot: ~/.copilot/skills/<name>/SKILL.md
-    mkdir -p ~/.copilot/skills/"$skill_name"
-    cp "$skill_dir"SKILL.md ~/.copilot/skills/"$skill_name"/SKILL.md
-  done
-  echo "Skills installed to Claude Code, Codex CLI, and Copilot:$SKILL_NAMES"
-fi
+bash "$SCRIPT_DIR/install-claude.sh"
+bash "$SCRIPT_DIR/install-codex.sh"
+bash "$SCRIPT_DIR/install-copilot.sh"
 
 # --- Git config ---
 echo ""
@@ -241,7 +141,16 @@ else
   FAIL=$((FAIL+1))
 fi
 
-# 2. Codex permissions profile
+# 2. Codex baseline config
+if grep -q 'model = "gpt-5.4"' ~/.codex/config.toml 2>/dev/null && grep -q 'codex_hooks = true' ~/.codex/config.toml 2>/dev/null; then
+  echo "  [PASS] Codex baseline config active"
+  PASS=$((PASS+1))
+else
+  echo "  [FAIL] Codex baseline config missing expected defaults"
+  FAIL=$((FAIL+1))
+fi
+
+# 3. Codex permissions profile
 if grep -q 'default_permissions = "global_lockdown"' ~/.codex/config.toml 2>/dev/null; then
   echo "  [PASS] Codex global_lockdown profile active"
   PASS=$((PASS+1))
@@ -250,7 +159,7 @@ else
   FAIL=$((FAIL+1))
 fi
 
-# 3. codex-safe wrapper
+# 4. codex-safe wrapper
 if [ -x ~/.local/bin/codex-safe ]; then
   echo "  [PASS] codex-safe wrapper installed and executable"
   PASS=$((PASS+1))
@@ -259,18 +168,27 @@ else
   FAIL=$((FAIL+1))
 fi
 
-# 4. codex-safe blocks --profile override (must exit 64)
+# 5. codex-safe blocks unapproved profiles (must exit 64)
 EXIT_CODE=0
 ~/.local/bin/codex-safe --profile foo --help 2>/dev/null || EXIT_CODE=$?
 if [ "$EXIT_CODE" -eq 64 ]; then
-  echo "  [PASS] codex-safe blocks --profile override (exit 64)"
+  echo "  [PASS] codex-safe blocks unapproved profiles (exit 64)"
   PASS=$((PASS+1))
 else
   echo "  [FAIL] codex-safe did not exit 64 (got $EXIT_CODE)"
   FAIL=$((FAIL+1))
 fi
 
-# 5. Copilot instructions present (VS Code extension + CLI)
+# 6. Codex hooks installed
+if [ -f ~/.codex/hooks.json ] && [ -x ~/.codex/hooks/pre-command-guard.sh ] && [ -x ~/.codex/hooks/stop-reminder.sh ]; then
+  echo "  [PASS] Codex hooks installed"
+  PASS=$((PASS+1))
+else
+  echo "  [FAIL] Codex hooks missing"
+  FAIL=$((FAIL+1))
+fi
+
+# 7. Copilot instructions present (VS Code extension + CLI)
 if [ -f ~/.copilot/instructions/global-contract.instructions.md ] && [ -f ~/.copilot/copilot-instructions.md ]; then
   echo "  [PASS] Copilot instructions present (extension + CLI)"
   PASS=$((PASS+1))
@@ -279,7 +197,7 @@ else
   FAIL=$((FAIL+1))
 fi
 
-# 6. Shared memory and workflow prompts installed (all three tools)
+# 8. Shared memory and workflow prompts installed (all three tools)
 if [ -f ~/.claude/MEMORY.md ] && [ -f ~/.claude/memory/user_role.md ] && [ -f ~/.claude/prompts/workflow.md ] && \
    [ -f ~/.codex/MEMORY.md ] && [ -f ~/.codex/memory/user_role.md ] && [ -f ~/.codex/prompts/workflow.md ] && \
    [ -f ~/.copilot/MEMORY.md ] && [ -f ~/.copilot/memory/user_role.md ] && [ -f ~/.copilot/prompts/workflow.md ]; then
@@ -290,7 +208,7 @@ else
   FAIL=$((FAIL+1))
 fi
 
-# 7. Git conditional email
+# 9. Git conditional email
 if grep -q 'hasconfig:remote' ~/.gitconfig 2>/dev/null; then
   echo "  [PASS] Git conditional include for GitHub noreply active"
   PASS=$((PASS+1))
@@ -299,28 +217,29 @@ else
   FAIL=$((FAIL+1))
 fi
 
-# 8. Skills installed across all three tools
+# 10. Skills installed across all three tools
 CLAUDE_SKILLS=$(ls -1d ~/.claude/skills/*/SKILL.md 2>/dev/null | wc -l | tr -d ' ')
-CODEX_SKILLS=$(ls -1d ~/.agents/skills/*/SKILL.md 2>/dev/null | wc -l | tr -d ' ')
+CODEX_SKILLS=$(ls -1d ~/.codex/skills/*/SKILL.md 2>/dev/null | wc -l | tr -d ' ')
+CODEX_COMPAT_SKILLS=$(ls -1d ~/.agents/skills/*/SKILL.md 2>/dev/null | wc -l | tr -d ' ')
 COPILOT_SKILLS=$(ls -1d ~/.copilot/skills/*/SKILL.md 2>/dev/null | wc -l | tr -d ' ')
-if [ "$CLAUDE_SKILLS" -ge 7 ] && [ "$CODEX_SKILLS" -ge 7 ] && [ "$COPILOT_SKILLS" -ge 7 ]; then
-  echo "  [PASS] Skills installed: Claude($CLAUDE_SKILLS) Codex($CODEX_SKILLS) Copilot($COPILOT_SKILLS)"
+if [ "$CLAUDE_SKILLS" -ge 11 ] && [ "$CODEX_SKILLS" -ge 11 ] && [ "$COPILOT_SKILLS" -ge 11 ]; then
+  echo "  [PASS] Skills installed: Claude($CLAUDE_SKILLS) Codex($CODEX_SKILLS) Copilot($COPILOT_SKILLS) CompatibilityMirror($CODEX_COMPAT_SKILLS)"
   PASS=$((PASS+1))
 else
-  echo "  [FAIL] Skills missing: Claude($CLAUDE_SKILLS) Codex($CODEX_SKILLS) Copilot($COPILOT_SKILLS) — expected 7 each"
+  echo "  [FAIL] Skills missing: Claude($CLAUDE_SKILLS) Codex($CODEX_SKILLS) Copilot($COPILOT_SKILLS) — expected at least 11 each"
   FAIL=$((FAIL+1))
 fi
 
-# 9. Subagents (Claude Code + Codex)
-if [ -f ~/.claude/agents/reviewer.md ] && [ -f ~/.codex/agents/reviewer.toml ]; then
-  echo "  [PASS] Subagents installed (Claude + Codex)"
+# 11. Subagents (Claude Code + Codex)
+if [ -f ~/.claude/agents/reviewer.md ] && [ -f ~/.codex/agents/explorer.toml ] && [ -f ~/.codex/agents/implementer.toml ] && [ -f ~/.codex/agents/reviewer.toml ] && [ -f ~/.codex/agents/security.toml ]; then
+  echo "  [PASS] Subagents installed (Claude reviewer + Codex explorer/implementer/reviewer/security)"
   PASS=$((PASS+1))
 else
-  echo "  [FAIL] Subagents missing (Claude and/or Codex)"
+  echo "  [FAIL] Subagents missing (Claude reviewer and/or Codex agents)"
   FAIL=$((FAIL+1))
 fi
 
-# 10. Copilot AGENTS.md
+# 12. Copilot AGENTS.md
 if [ -f ~/.copilot/AGENTS.md ]; then
   echo "  [PASS] Copilot AGENTS.md installed"
   PASS=$((PASS+1))
@@ -329,7 +248,7 @@ else
   FAIL=$((FAIL+1))
 fi
 
-# 11. Claude Code managed settings (bypass disabled)
+# 13. Claude Code managed settings (bypass disabled)
 if [ -f "/Library/Application Support/ClaudeCode/managed-settings.json" ] && grep -q 'disableBypassPermissionsMode' "/Library/Application Support/ClaudeCode/managed-settings.json" 2>/dev/null; then
   echo "  [PASS] Claude Code bypass permissions disabled (managed settings)"
   PASS=$((PASS+1))
@@ -353,13 +272,12 @@ for f in \
   ~/.claude/MEMORY.md \
   ~/.claude/memory/user_role.md \
   ~/.claude/prompts/workflow.md \
-  ~/.claude/agents/reviewer.md \
   ~/.codex/config.toml \
   ~/.codex/AGENTS.md \
   ~/.codex/MEMORY.md \
+  ~/.codex/hooks.json \
   ~/.codex/memory/user_role.md \
   ~/.codex/prompts/workflow.md \
-  ~/.codex/agents/reviewer.toml \
   ~/.local/bin/codex-safe \
   ~/.copilot/copilot-instructions.md \
   ~/.copilot/AGENTS.md \
@@ -374,8 +292,21 @@ for f in \
     shasum -a 256 "$f" >> "$MANIFEST"
   fi
 done
+
+for agent_file in ~/.claude/agents/*.md ~/.codex/agents/*.toml; do
+  if [ -f "$agent_file" ]; then
+    shasum -a 256 "$agent_file" >> "$MANIFEST"
+  fi
+done
+
+for hook_file in ~/.codex/hooks/*.sh; do
+  if [ -f "$hook_file" ]; then
+    shasum -a 256 "$hook_file" >> "$MANIFEST"
+  fi
+done
+
 # Add all skill files to manifest
-for skill_file in ~/.claude/skills/*/SKILL.md ~/.agents/skills/*/SKILL.md ~/.copilot/skills/*/SKILL.md; do
+for skill_file in ~/.claude/skills/*/SKILL.md ~/.codex/skills/*/SKILL.md ~/.agents/skills/*/SKILL.md ~/.copilot/skills/*/SKILL.md; do
   if [ -f "$skill_file" ]; then
     shasum -a 256 "$skill_file" >> "$MANIFEST"
   fi

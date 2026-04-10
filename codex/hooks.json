@@ -1,0 +1,11 @@
+[
+  {
+    "event": "PreToolUse",
+    "matcher": "Bash",
+    "command": "$HOME/.codex/hooks/pre-command-guard.sh"
+  },
+  {
+    "event": "Stop",
+    "command": "$HOME/.codex/hooks/stop-reminder.sh"
+  }
+]

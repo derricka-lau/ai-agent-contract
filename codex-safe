@@ -1,12 +1,61 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Hard gate: disallow overriding profile from CLI.
-for arg in "$@"; do
-  if [[ "$arg" == "--profile" || "$arg" == "-p" || "$arg" == --profile=* ]]; then
-    echo "codex-safe: overriding profile is blocked; secure-global is enforced." >&2
-    exit 64
-  fi
+selected_profile=""
+args=()
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --profile)
+      if [[ $# -lt 2 ]]; then
+        echo "codex-safe: missing value for --profile." >&2
+        exit 64
+      fi
+      if [[ -n "$selected_profile" ]]; then
+        echo "codex-safe: profile may only be specified once." >&2
+        exit 64
+      fi
+      selected_profile="$2"
+      shift 2
+      ;;
+    -p)
+      if [[ $# -lt 2 ]]; then
+        echo "codex-safe: missing value for -p." >&2
+        exit 64
+      fi
+      if [[ -n "$selected_profile" ]]; then
+        echo "codex-safe: profile may only be specified once." >&2
+        exit 64
+      fi
+      selected_profile="$2"
+      shift 2
+      ;;
+    --profile=*)
+      if [[ -n "$selected_profile" ]]; then
+        echo "codex-safe: profile may only be specified once." >&2
+        exit 64
+      fi
+      selected_profile="${1#--profile=}"
+      shift
+      ;;
+    *)
+      args+=("$1")
+      shift
+      ;;
+  esac
 done
 
-exec codex --profile secure-global "$@"
+if [[ -z "$selected_profile" ]]; then
+  selected_profile="secure-global"
+fi
+
+case "$selected_profile" in
+  secure-global|deep|quick|verify)
+    ;;
+  *)
+    echo "codex-safe: profile '$selected_profile' is not approved. Allowed profiles: secure-global, deep, quick, verify." >&2
+    exit 64
+    ;;
+esac
+
+exec codex --profile "$selected_profile" "${args[@]}"
