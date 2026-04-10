@@ -1,14 +1,11 @@
-model = "gpt-5.4"
-model_reasoning_effort = "high"
+model = "gpt-5.3-codex"
+model_reasoning_effort = "xhigh"
 service_tier = "fast"
 sandbox_mode = "workspace-write"
 approval_policy = "on-request"
 web_search = "cached"
 notify = ["terminal-notifier", "-message", "Codex turn complete", "-title", "Codex"]
 default_permissions = "global_lockdown"
-
-[notice.model_migrations]
-"gpt-5.3-codex" = "gpt-5.4"
 
 [sandbox_workspace_write]
 network_access = false
