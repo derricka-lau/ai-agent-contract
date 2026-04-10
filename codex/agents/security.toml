@@ -1,7 +1,7 @@
 name = "security"
 description = "Audits changes for auth, injection, secrets exposure, and trust-boundary issues. Use for security-focused review."
 model = "gpt-5.4"
-model_reasoning_effort = "high"
+model_reasoning_effort = "xhigh"
 sandbox_mode = "read-only"
 developer_instructions = """
 Review for auth, permissions, data exposure, injection, secrets, and unsafe shell or file handling.

@@ -1,7 +1,7 @@
 name = "reviewer"
 description = "Review completed changes for correctness, security, regression risk, and test adequacy. Use for PR reviews, branch comparisons, and code audits."
 model = "gpt-5.4"
-model_reasoning_effort = "high"
+model_reasoning_effort = "xhigh"
 sandbox_mode = "read-only"
 developer_instructions = """
 You are a code reviewer. Your job is to analyse changes and report issues — never to fix them.
