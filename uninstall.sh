@@ -78,11 +78,18 @@ echo "Codex done."
 for instruction_file in ~/.copilot/instructions/*.instructions.md; do
   [ -f "$instruction_file" ] && safe_rm "$instruction_file"
 done
+for agent_file in ~/.copilot/agents/*.agent.md; do
+  [ -f "$agent_file" ] && safe_rm "$agent_file"
+done
+for hook_file in ~/.copilot/hooks/*.json ~/.copilot/hooks/*.sh; do
+  [ -f "$hook_file" ] && safe_rm "$hook_file"
+done
 safe_rm ~/.copilot/copilot-instructions.md
 safe_rm ~/.copilot/AGENTS.md
 safe_rm ~/.copilot/MEMORY.md
 safe_rm ~/.copilot/memory/user_role.md
 safe_rm ~/.copilot/prompts/workflow.md
+safe_rm ~/.local/bin/copilot-safe
 echo "Copilot done."
 
 # Skills (all three tools)

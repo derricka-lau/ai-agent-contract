@@ -73,6 +73,9 @@ for f in \
   ~/.copilot/instructions/*.instructions.md \
   ~/.copilot/copilot-instructions.md \
   ~/.copilot/AGENTS.md \
+  ~/.copilot/agents/*.agent.md \
+  ~/.copilot/hooks/*.json \
+  ~/.copilot/hooks/*.sh \
   ~/.copilot/MEMORY.md \
   ~/.copilot/memory/user_role.md \
   ~/.copilot/prompts/workflow.md \
@@ -80,6 +83,7 @@ for f in \
   ~/.codex/skills/*/SKILL.md \
   ~/.agents/skills/*/SKILL.md \
   ~/.copilot/skills/*/SKILL.md \
+  ~/.local/bin/copilot-safe \
   ~/.gitconfig \
   ~/.gitconfig-github; do
   if [ -f "$f" ]; then
@@ -131,10 +135,14 @@ if ! echo "$PATH" | grep -q "$HOME/.local/bin"; then
   echo "Added ~/.local/bin to PATH in $SHELL_RC"
 fi
 
-# Ensure COPILOT_CUSTOM_INSTRUCTIONS_DIRS is set
+# Ensure COPILOT_CUSTOM_INSTRUCTIONS_DIRS includes both ~/.copilot and ~/.copilot/instructions
+COPILOT_DIRS_EXPORT='export COPILOT_CUSTOM_INSTRUCTIONS_DIRS="$HOME/.copilot,$HOME/.copilot/instructions"'
 if ! grep -q 'COPILOT_CUSTOM_INSTRUCTIONS_DIRS' "$SHELL_RC" 2>/dev/null; then
-  echo 'export COPILOT_CUSTOM_INSTRUCTIONS_DIRS="$HOME/.copilot/instructions"' >> "$SHELL_RC"
+  echo "$COPILOT_DIRS_EXPORT" >> "$SHELL_RC"
   echo "Added COPILOT_CUSTOM_INSTRUCTIONS_DIRS to $SHELL_RC"
+elif ! grep -q '\$HOME/.copilot,\$HOME/.copilot/instructions' "$SHELL_RC" 2>/dev/null; then
+  echo "$COPILOT_DIRS_EXPORT" >> "$SHELL_RC"
+  echo "Updated COPILOT_CUSTOM_INSTRUCTIONS_DIRS in $SHELL_RC"
 fi
 
 # --- Verification ---
@@ -208,7 +216,25 @@ else
   FAIL=$((FAIL+1))
 fi
 
-# 8. Shared memory and workflow prompts installed (all three tools)
+# 8. Copilot custom agents installed
+if [ -f ~/.copilot/agents/architect.agent.md ] && [ -f ~/.copilot/agents/implementer.agent.md ] && [ -f ~/.copilot/agents/reviewer.agent.md ] && [ -f ~/.copilot/agents/security-reviewer.agent.md ]; then
+  echo "  [PASS] Copilot custom agents installed"
+  PASS=$((PASS+1))
+else
+  echo "  [FAIL] Copilot custom agents missing"
+  FAIL=$((FAIL+1))
+fi
+
+# 9. Copilot deterministic safety controls
+if [ -f ~/.copilot/hooks/policy.json ] && [ -x ~/.copilot/hooks/pre-tool-guard.sh ] && [ -x ~/.local/bin/copilot-safe ]; then
+  echo "  [PASS] Copilot safety controls installed (hook guard + safe wrapper)"
+  PASS=$((PASS+1))
+else
+  echo "  [FAIL] Copilot safety controls missing"
+  FAIL=$((FAIL+1))
+fi
+
+# 10. Shared memory and workflow prompts installed (all three tools)
 if [ -f ~/.claude/MEMORY.md ] && [ -f ~/.claude/memory/user_role.md ] && [ -f ~/.claude/prompts/workflow.md ] && \
    [ -f ~/.codex/MEMORY.md ] && [ -f ~/.codex/memory/user_role.md ] && [ -f ~/.codex/prompts/workflow.md ] && \
    [ -f ~/.copilot/MEMORY.md ] && [ -f ~/.copilot/memory/user_role.md ] && [ -f ~/.copilot/prompts/workflow.md ]; then
@@ -219,7 +245,7 @@ else
   FAIL=$((FAIL+1))
 fi
 
-# 9. Git conditional email
+# 11. Git conditional email
 if grep -q 'hasconfig:remote' ~/.gitconfig 2>/dev/null; then
   echo "  [PASS] Git conditional include for GitHub noreply active"
   PASS=$((PASS+1))
@@ -228,7 +254,7 @@ else
   FAIL=$((FAIL+1))
 fi
 
-# 10. Skills installed across all three tools
+# 12. Skills installed across all three tools
 CLAUDE_SKILLS=$(ls -1d ~/.claude/skills/*/SKILL.md 2>/dev/null | wc -l | tr -d ' ')
 CODEX_SKILLS=$(ls -1d ~/.codex/skills/*/SKILL.md 2>/dev/null | wc -l | tr -d ' ')
 CODEX_COMPAT_SKILLS=$(ls -1d ~/.agents/skills/*/SKILL.md 2>/dev/null | wc -l | tr -d ' ')
@@ -241,16 +267,16 @@ else
   FAIL=$((FAIL+1))
 fi
 
-# 11. Subagents (Claude Code + Codex)
-if [ -f ~/.claude/agents/reviewer.md ] && [ -f ~/.claude/agents/architect.md ] && [ -f ~/.claude/agents/implementer.md ] && [ -f ~/.claude/agents/security-reviewer.md ] && [ -f ~/.codex/agents/explorer.toml ] && [ -f ~/.codex/agents/implementer.toml ] && [ -f ~/.codex/agents/reviewer.toml ] && [ -f ~/.codex/agents/security.toml ]; then
-  echo "  [PASS] Subagents installed (Claude architect/implementer/reviewer/security-reviewer + Codex explorer/implementer/reviewer/security)"
+# 13. Subagents / custom agents (Claude + Codex + Copilot)
+if [ -f ~/.claude/agents/reviewer.md ] && [ -f ~/.claude/agents/architect.md ] && [ -f ~/.claude/agents/implementer.md ] && [ -f ~/.claude/agents/security-reviewer.md ] && [ -f ~/.codex/agents/explorer.toml ] && [ -f ~/.codex/agents/implementer.toml ] && [ -f ~/.codex/agents/reviewer.toml ] && [ -f ~/.codex/agents/security.toml ] && [ -f ~/.copilot/agents/architect.agent.md ] && [ -f ~/.copilot/agents/implementer.agent.md ] && [ -f ~/.copilot/agents/reviewer.agent.md ] && [ -f ~/.copilot/agents/security-reviewer.agent.md ]; then
+  echo "  [PASS] Role agents installed across Claude, Codex, and Copilot"
   PASS=$((PASS+1))
 else
-  echo "  [FAIL] Subagents missing (Claude and/or Codex agents)"
+  echo "  [FAIL] Role agents missing for one or more tools"
   FAIL=$((FAIL+1))
 fi
 
-# 12. Copilot AGENTS.md
+# 14. Copilot AGENTS.md
 if [ -f ~/.copilot/AGENTS.md ]; then
   echo "  [PASS] Copilot AGENTS.md installed"
   PASS=$((PASS+1))
@@ -259,7 +285,7 @@ else
   FAIL=$((FAIL+1))
 fi
 
-# 13. Git hooks (global)
+# 15. Git hooks (global)
 HOOKS_PATH="$(git config --global core.hooksPath 2>/dev/null || true)"
 if [ -n "$HOOKS_PATH" ] && [ -x "$HOOKS_PATH/pre-commit" ] && [ -x "$HOOKS_PATH/pre-push" ]; then
   echo "  [PASS] Git hooks installed globally (pre-commit + pre-push at $HOOKS_PATH)"
@@ -269,7 +295,7 @@ else
   FAIL=$((FAIL+1))
 fi
 
-# 14. Claude Code managed settings (bypass disabled)
+# 16. Claude Code managed settings (bypass disabled)
 if [ -f "/Library/Application Support/ClaudeCode/managed-settings.json" ] && grep -q 'disableBypassPermissionsMode' "/Library/Application Support/ClaudeCode/managed-settings.json" 2>/dev/null; then
   echo "  [PASS] Claude Code bypass permissions disabled (managed settings)"
   PASS=$((PASS+1))
@@ -300,6 +326,7 @@ for f in \
   ~/.codex/memory/user_role.md \
   ~/.codex/prompts/workflow.md \
   ~/.local/bin/codex-safe \
+  ~/.local/bin/copilot-safe \
   ~/.copilot/copilot-instructions.md \
   ~/.copilot/AGENTS.md \
   ~/.copilot/MEMORY.md \
@@ -325,13 +352,13 @@ for instruction_file in ~/.copilot/instructions/*.instructions.md; do
   fi
 done
 
-for agent_file in ~/.claude/agents/*.md ~/.codex/agents/*.toml; do
+for agent_file in ~/.claude/agents/*.md ~/.codex/agents/*.toml ~/.copilot/agents/*.agent.md; do
   if [ -f "$agent_file" ]; then
     shasum -a 256 "$agent_file" >> "$MANIFEST"
   fi
 done
 
-for hook_file in ~/.codex/hooks/*.sh; do
+for hook_file in ~/.codex/hooks/*.sh ~/.copilot/hooks/*.sh ~/.copilot/hooks/*.json; do
   if [ -f "$hook_file" ]; then
     shasum -a 256 "$hook_file" >> "$MANIFEST"
   fi
