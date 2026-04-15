@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+for arg in "$@"; do
+  case "$arg" in
+    --allow-all|--yolo|--allow-all-tools|--allow-all-paths|--allow-all-urls)
+      echo "copilot-safe: refusing '$arg' because it disables safety gates." >&2
+      exit 64
+      ;;
+  esac
+done
+
+exec copilot \
+  --deny-tool='shell(rm)' \
+  --deny-tool='shell(git push)' \
+  --deny-tool='shell(git reset --hard)' \
+  --deny-tool='shell(git checkout --)' \
+  --deny-tool='shell(chmod -R 777)' \
+  --deny-tool='shell(mkfs)' \
+  "$@"

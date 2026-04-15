@@ -2,7 +2,7 @@
 
 Personal dotfiles for bootstrapping AI coding agents on any machine — local or devcontainer.
 
-One `install.sh` configures Claude Code, Codex CLI, and Copilot CLI with a shared baseline plus Codex-specific hardening, hooks, agents, and skills.
+One `install.sh` configures Claude Code, Codex CLI, and Copilot CLI with a shared baseline plus hardened role agents, hooks, wrappers, and skills across all three.
 
 ## Prerequisites
 
@@ -49,6 +49,14 @@ dotfiles/
 │   ├── MEMORY.md                  # Memory index (same content as Claude/Codex)
 │   ├── memory/
 │   │   └── user_role.md           # Shared user context
+│   ├── agents/
+│   │   ├── architect.agent.md     # Planning/mapping custom agent
+│   │   ├── implementer.agent.md   # Focused implementation custom agent
+│   │   ├── reviewer.agent.md      # Read-focused review custom agent
+│   │   └── security-reviewer.agent.md # Security review custom agent
+│   ├── hooks/
+│   │   ├── policy.json            # Pre-tool policy hook config
+│   │   └── pre-tool-guard.sh      # Blocks dangerous tool commands
 │   └── instructions/
 │       ├── global-contract.instructions.md  # VS Code extension global defaults
 │       ├── backend.instructions.md          # Backend-specific guidance
@@ -72,11 +80,13 @@ dotfiles/
 ├── gitconfig                      # Global git config (Cardiff email default)
 ├── gitconfig-github               # Conditional include (GitHub noreply email)
 ├── codex-safe                     # Wrapper enforcing approved Codex profiles
+├── copilot-safe                   # Wrapper enforcing safe Copilot CLI flags
 ├── install-claude.sh              # Claude-specific install steps
 ├── install-codex.sh               # Codex-specific install steps
 ├── install-copilot.sh             # Copilot-specific install steps
 ├── install-devcontainer.sh        # Devcontainer wrapper around install.sh
 ├── install.sh                     # Installs everything + runs verification
+├── ROBUSTNESS-MATRIX.md           # Cross-tool capability and hardening matrix
 ├── uninstall.sh                   # Removes all installed files
 └── README.md
 ```
@@ -108,9 +118,9 @@ cd ~/dotfiles
 2. **Overwrite** existing config files (not merge) — intentional for reproducibility
 3. Run `install-claude.sh`, `install-codex.sh`, and `install-copilot.sh`
 4. Configure git with conditional email (GitHub noreply / GitLab Cardiff)
-5. Set `COPILOT_CUSTOM_INSTRUCTIONS_DIRS` env var for Copilot CLI
+5. Set `COPILOT_CUSTOM_INSTRUCTIONS_DIRS` env var for Copilot CLI (`~/.copilot` and `~/.copilot/instructions`)
 6. Optionally install system-level managed settings (requires sudo on macOS)
-7. Run 13 verification checks and report results
+7. Run 15 verification checks and report results
 
 ### VSCode devcontainers (automatic)
 
@@ -149,12 +159,14 @@ Every devcontainer will automatically clone this repo and run `install-devcontai
 | `codex-safe` wrapper | `~/.local/bin/` | Full overwrite |
 | Copilot VS Code extension instructions | `~/.copilot/instructions/` | Full overwrite |
 | Copilot CLI global instructions + AGENTS.md | `~/.copilot/copilot-instructions.md`, `~/.copilot/AGENTS.md` | Full overwrite |
+| Copilot custom agents + hooks | `~/.copilot/agents/`, `~/.copilot/hooks/` | Full overwrite |
 | Copilot memory + workflow prompts | `~/.copilot/MEMORY.md`, `~/.copilot/memory/`, `~/.copilot/prompts/workflow.md` | Full overwrite |
 | Copilot CLI (if missing) | `npm install -g @github/copilot` | Skip if present |
+| `copilot-safe` wrapper | `~/.local/bin/` | Full overwrite |
 | Shared skills (all tools) | `~/.claude/skills/`, `~/.codex/skills/`, `~/.copilot/skills/` | Full overwrite |
 | Git config + GitHub conditional include | `~/.gitconfig`, `~/.gitconfig-github` | Full overwrite |
 | Add `~/.local/bin` to PATH | `~/.zshrc` or `~/.bashrc` | Append if missing |
-| Set `COPILOT_CUSTOM_INSTRUCTIONS_DIRS` | `~/.zshrc` or `~/.bashrc` | Append if missing |
+| Set `COPILOT_CUSTOM_INSTRUCTIONS_DIRS` | `~/.zshrc` or `~/.bashrc` | Append if missing (`$HOME/.copilot,$HOME/.copilot/instructions`) |
 
 ## Sensitive file protection
 
@@ -165,7 +177,9 @@ Every devcontainer will automatically clone this repo and run `install-devcontai
 | **Codex CLI** | `default_permissions = "global_lockdown"` + approved profiles in config.toml | Yes — runtime gate | `grep "global_lockdown" ~/.codex/config.toml` |
 | **Codex CLI** | `hooks.json` + shell hooks block dangerous commands and premature completion | Yes — hook gate | `ls ~/.codex/hooks.json ~/.codex/hooks/` |
 | **Codex CLI** | `codex-safe` wrapper allows only approved profiles | Yes — shell gate | `codex-safe --profile foo --help` (should exit 64) |
-| **Copilot** | Instructions in `.instructions.md` (extension) + `copilot-instructions.md` (CLI) | No — LLM guidance only | `ls ~/.copilot/instructions/ ~/.copilot/copilot-instructions.md` |
+| **Copilot CLI** | `copilot-safe` wrapper denies dangerous shell tools and blocks `--allow-all` / `--yolo` | Yes — shell gate (when using wrapper) | `copilot-safe --allow-all` (should exit 64) |
+| **Copilot agents** | `~/.copilot/hooks/policy.json` + `pre-tool-guard.sh` block dangerous commands in pre-tool hook | Yes — hook gate when hooks are enabled | `ls ~/.copilot/hooks/policy.json ~/.copilot/hooks/pre-tool-guard.sh` |
+| **Copilot** | Instructions in `.instructions.md` (extension) + `copilot-instructions.md` (CLI) | Guidance layer | `ls ~/.copilot/instructions/ ~/.copilot/copilot-instructions.md` |
 
 Blocked files:
 - Environment: `.env`, `.env.*`, `.envrc`
@@ -186,12 +200,14 @@ Blocked files:
 | 5 | codex-safe blocks unapproved profiles | `codex-safe --profile foo` exits 64 |
 | 6 | Codex hooks | `~/.codex/hooks.json` and hook scripts present |
 | 7 | Copilot instructions | Global, backend, frontend, tests, and CLI instructions present in `~/.copilot/` |
-| 8 | Shared memory + prompts | Memory index, user role, and `prompts/workflow.md` present for Claude, Codex, Copilot |
-| 9 | Git conditional email | `hasconfig:remote` in `~/.gitconfig` |
-| 10 | Skills (all tools) | At least 12 skills in each of `~/.claude/skills/`, `~/.codex/skills/`, `~/.copilot/skills/` |
-| 11 | Subagents (Claude + Codex) | `architect.md`, `implementer.md`, `reviewer.md`, `security-reviewer.md` in `~/.claude/agents/`, plus `explorer.toml`, `implementer.toml`, `reviewer.toml`, `security.toml` in `~/.codex/agents/` |
-| 12 | Copilot AGENTS.md | `~/.copilot/AGENTS.md` present |
-| 13 | Claude managed settings (optional) | `disableBypassPermissionsMode` in managed-settings.json |
+| 8 | Copilot custom agents | `architect`, `implementer`, `reviewer`, and `security-reviewer` agent profiles present |
+| 9 | Copilot safety controls | Hook guard and `copilot-safe` wrapper present and executable |
+| 10 | Shared memory + prompts | Memory index, user role, and `prompts/workflow.md` present for Claude, Codex, Copilot |
+| 11 | Git conditional email | `hasconfig:remote` in `~/.gitconfig` |
+| 12 | Skills (all tools) | At least 12 skills in each of `~/.claude/skills/`, `~/.codex/skills/`, `~/.copilot/skills/` |
+| 13 | Role agents across all three | Planning, implementation, review, and security agents installed for Claude, Codex, and Copilot |
+| 14 | Copilot AGENTS.md | `~/.copilot/AGENTS.md` present |
+| 15 | Claude managed settings (optional) | `disableBypassPermissionsMode` in managed-settings.json |
 
 ## Global contract (all three tools)
 
@@ -219,7 +235,7 @@ The same global contract is deployed to all three CLI tools:
 
 These files keep planning/handoff context consistent across tools.
 
-Codex also gets user-level hooks and agent definitions under `~/.codex/`.
+Codex and Copilot also get user-level role agent definitions and hook guardrails under `~/.codex/` and `~/.copilot/`.
 
 ## Skills (shared across all tools)
 
@@ -242,8 +258,8 @@ Skills are deployed to `~/.claude/skills/`, `~/.codex/skills/`, and `~/.copilot/
 
 ## Deterministic vs guidance
 
-- Deterministic runtime guards: Claude `permissions.deny` and managed settings, Codex filesystem permission profile + hooks + approved-profile `codex-safe` wrapper.
-- Guidance-only behaviour: Copilot instructions, memory files, and prompt templates (no runtime deny gate).
+- Deterministic runtime guards: Claude `permissions.deny` and managed settings, Codex filesystem permission profile + hooks + approved-profile `codex-safe` wrapper, Copilot pre-tool policy hook + `copilot-safe` wrapper.
+- Guidance layer: Copilot instructions, memory files, and prompt templates complement deterministic controls.
 
 ## Git conditional email
 
