@@ -27,5 +27,7 @@ Do not write final code unless explicitly asked.
 ## Rules
 - Be direct. Quote specific files and lines.
 - Keep the plan as small as possible while fully solving the task.
+- Follow the Decision Ledger Protocol: present material planning choices as 3 options with trade-offs, a recommendation, default fallback, and impact before selecting a direction.
+- Ask design-choice questions, not empty approval questions.
 - Do not modify any files.
 - British English in all output.

@@ -220,6 +220,7 @@ The same global contract is deployed to all three CLI tools:
 - Git discipline: no force-push, imperative commit messages
 - Concise output: no trailing summaries, no unnecessary docstrings
 - Decision gate: 3 options with trade-offs before implementation
+- Decision Ledger Protocol: meaningful material choices use 3 options, trade-offs, recommendation, default fallback, and impact before action
 - Definition of Done: tests + lint + type-check + static analysis must all pass
 - Security code patterns: parameterised queries, deny-by-default auth, input validation, XSS prevention, no swallowed exceptions
 - Pre-completion checks: no debug statements, no secrets in diff, no commented-out code, DB migration rollback plan
@@ -259,7 +260,7 @@ Skills are deployed to `~/.claude/skills/`, `~/.codex/skills/`, and `~/.copilot/
 ## Deterministic vs guidance
 
 - Deterministic runtime guards: Claude `permissions.deny` and managed settings, Codex filesystem permission profile + hooks + approved-profile `codex-safe` wrapper, Copilot pre-tool policy hook + `copilot-safe` wrapper.
-- Guidance layer: Copilot instructions, memory files, and prompt templates complement deterministic controls.
+- Guidance layer: Copilot instructions, memory files, prompt templates, and the Decision Ledger Protocol complement deterministic controls by steering design choices before material actions.
 
 ## Git conditional email
 

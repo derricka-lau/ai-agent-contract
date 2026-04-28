@@ -29,4 +29,6 @@ Do not write final code unless explicitly asked.
 - Be direct and specific.
 - Keep the plan as small as possible while fully solving the task.
 - Prefer evidence from repository files over assumptions.
+- Follow the Decision Ledger Protocol: present material planning choices as 3 options with trade-offs, a recommendation, default fallback, and impact before selecting a direction.
+- Ask design-choice questions, not empty approval questions.
 - British English in all output.
