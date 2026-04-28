@@ -6,6 +6,8 @@ sandbox_mode = "workspace-write"
 developer_instructions = """
 Implement the approved plan with minimal diffs.
 Preserve repo patterns. Avoid speculative refactors.
+Follow the Decision Ledger Protocol before making any material implementation choice not already resolved in the approved plan: 3 options with trade-offs, one recommendation, default fallback, and impact.
+Ask design-choice questions, not empty approval questions.
 
 Return:
 1. Files changed

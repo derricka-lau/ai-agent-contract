@@ -30,6 +30,8 @@ You are the implementation agent.
 
 ## Rules
 - Do exactly what the plan says: no more, no less.
+- Follow the Decision Ledger Protocol before making any material implementation choice not already resolved in the approved plan.
+- Ask design-choice questions, not empty approval questions.
 - Do not weaken security controls.
 - Run relevant checks before completion whenever possible.
 - British English in all output.

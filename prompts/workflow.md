@@ -10,13 +10,13 @@ I need to: [task]
 Given my workflow:
 - Claude Code Opus = planning, diagnosis, review
 - Codex = short focused execution
-- Copilot = long autonomous runs
+- Copilot = long collaborative execution with Decision Ledger checkpoints
 
 Decide which tool should handle this and why.
 
 Rules:
 - If this is a short, bounded change, write a Codex prompt.
-- If this is a long multi-step task, write a Copilot prompt.
+- If this is a long multi-step task, write a Copilot prompt with explicit Decision Ledger checkpoints.
 - If this needs planning or diagnosis first, do that first.
 - If you can solve it directly better than either tool, say so.
 
@@ -48,13 +48,20 @@ Constraints:
 
 What I want from you:
 1. Ask only the minimum important questions needed to remove ambiguity.
-2. Then produce:
+2. Then produce Decision Ledger entries for each material planning choice:
+   - decision
+   - context
+   - exactly 3 options with trade-offs
+   - recommendation
+   - default fallback
+   - impact
+3. Then produce:
    - likely root cause or implementation approach
    - step-by-step plan
    - risks / edge cases
    - acceptance criteria
    - exact tests to run
-3. Finally, write a self-contained execution prompt for Copilot.
+4. Finally, write a self-contained execution prompt for Copilot that preserves unresolved Decision Ledger choices as checkpoints.
 
 If this task is simple enough for Codex to handle in one shot, say so and skip the Copilot prompt.
 
@@ -74,13 +81,15 @@ Include:
 - exact task description
 - relevant file paths
 - constraints and things not to change
+- resolved Decision Ledger choices
+- unresolved material choices as Decision Ledger checkpoints
 - acceptance criteria
 - verification commands to run
 
 Format it as a ready-to-paste prompt, not a summary.
 ```
 
-## 4. Copilot — long autonomous task
+## 4. Copilot — long collaborative task
 
 ```
 ## Task
@@ -103,14 +112,22 @@ Complete the task only when ALL of these are true:
 - Do not modify: [files / APIs / schema / deps]
 - Follow patterns from: [reference file]
 - Prefer the smallest correct diff
-- Do not stop at partial progress
+- Do not make material implementation choices without a Decision Ledger checkpoint
 
 ## Required workflow
-1. Inspect the relevant code and identify the likely root cause.
-2. Make the minimum correct change.
-3. Run verification after each meaningful change.
-4. If verification fails, keep iterating until the stop condition is met.
-5. If blocked, explain the blocker and the next best attempt.
+1. Inspect only enough code to frame the next material decision.
+2. For each material decision, stop and present a Decision Ledger entry:
+   - Decision
+   - Context
+   - exactly 3 options with trade-offs
+   - Recommendation
+   - Default if I do not choose
+   - Impact
+3. Wait for my choice before editing.
+4. Apply only the selected choice.
+5. Run verification after each meaningful change.
+6. If verification fails, present the next material recovery choice as a Decision Ledger entry before changing strategy.
+7. If blocked, explain the blocker and the next best Decision Ledger choice.
 
 ## Verification
 Run:
@@ -122,6 +139,7 @@ Run:
 ## Output
 Return:
 - root cause
+- Decision Ledger choices made
 - files changed
 - commands run
 - final results
@@ -145,6 +163,7 @@ Requirements:
 - [requirement 1]
 - [requirement 2]
 - [edge case / constraint]
+- If a material decision appears that is not covered here, stop and use the Decision Ledger Protocol before editing.
 
 Verification:
 - Run: [test / lint / typecheck command]
@@ -212,7 +231,7 @@ Requirements:
 - Use parallel workers only where the work is naturally separable
 - Many readers, one writer
 - Do not let multiple agents write the same file concurrently
-- Return a consolidated plan before broad edits
+- Return a consolidated Decision Ledger before broad edits
 - Preserve architecture unless explicitly requested
 - Prefer minimal diffs
 - Run or recommend strongest validations
@@ -224,7 +243,7 @@ Use:
 - security lane for trust-boundary and secrets review
 
 Return:
-- consolidated plan
+- consolidated Decision Ledger with recommendations
 - files likely to change
 - validation commands
 - risks and assumptions
@@ -236,7 +255,7 @@ Return:
 |------|------|
 | Plan, diagnose, review | Claude Code (#2, #6) |
 | Hand off context | Claude Code (#3) |
-| Long "keep going until done" | Copilot agent mode (#4) |
+| Long collaborative task with checkpoints | Copilot agent mode (#4) |
 | Parallel multi-file task | Copilot `/fleet` (#8) |
 | Short bounded edit | Codex CLI (#5) |
 | Copilot failed | Back to Claude Code (#7) |

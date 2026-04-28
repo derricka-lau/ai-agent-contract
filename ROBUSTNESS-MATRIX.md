@@ -6,6 +6,7 @@ This document defines the hardened baseline and parity map across the three conf
 
 - Keep behaviour consistent across planning, implementation, review, and security workflows.
 - Provide deterministic safety controls where each platform supports them.
+- Present meaningful material choices with explicit trade-offs before implementation decisions are made.
 - Keep setup reproducible through install and verification scripts.
 
 ## Persona Parity
@@ -47,9 +48,10 @@ This document defines the hardened baseline and parity map across the three conf
 ## Operational Defaults
 
 - Prefer plan-first for non-trivial tasks.
+- Use the Decision Ledger Protocol for material choices: 3 options, trade-offs, one recommendation, default fallback, and impact.
 - Keep diffs minimal and validate with lint, type-check, and tests.
 - Use read-only reviewer and security personas before merge when risk is non-trivial.
-- Prefer wrappers (`codex-safe`, `copilot-safe`) when running autonomous flows.
+- Prefer wrappers (`codex-safe`, `copilot-safe`) when running collaborative agent flows.
 
 ## Verification Expectations
 
@@ -59,4 +61,3 @@ This document defines the hardened baseline and parity map across the three conf
 - Persona files are present for all three.
 - Guardrails (hooks and wrappers) are present and executable where applicable.
 - Shared skills, memory, and prompts are present for all three.
-
