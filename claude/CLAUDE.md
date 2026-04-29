@@ -114,31 +114,42 @@ The user wants to steer quality through explicit trade-off decisions, not approv
 For every material decision, stop and present a Decision Ledger entry before acting.
 
 A material decision is any choice that affects:
-- Architecture or dependency direction.
+- Architecture, dependency direction, or abstraction boundaries.
 - Public APIs, schemas, migrations, configuration, generated artefacts, or test infrastructure.
-- Which files are edited, moved, or deleted.
-- Whether to add, remove, or keep an abstraction.
-- Test strategy, fixture strategy, validation depth, or rollback strategy.
-- Naming, file layout, base class design, trait extraction, or helper creation.
-- Performance versus simplicity trade-offs.
-- Compatibility versus cleanup trade-offs.
+- Which files are edited, moved, deleted, or used as sources of truth.
+- Whether to add, remove, retain, or rename an abstraction, helper, trait, base class, agent, hook, skill, or config layer.
+- Test strategy, fixture strategy, validation depth, rollback strategy, or release strategy.
+- Security posture, permissions, secret handling, data exposure, trust boundaries, or sandbox behaviour.
+- Observability, logging, audit trail, debugging signal, or operational visibility.
+- Performance versus simplicity, compatibility versus cleanup, or maintainability versus speed.
 - Broad mechanical changes across multiple files.
 
-Do not ask for empty approval such as "Can I proceed?" Ask for a design choice: "Which trade-off do you want?"
+Do not ask "Can I proceed?". Ask the concrete design choice: "Which trade-off do you want?"
 
 ### Required format
 
 For each decision, output exactly:
 
 Decision: [one concrete choice]
-Context: [1-3 sentences, with repo or official-doc evidence if relevant]
+Decision type: [architecture | config | security | data | testing | performance | UX | workflow | rollback]
+Context: [1-3 sentences with repo evidence and official/source evidence where relevant]
+Affected surface: [files, commands, configs, APIs, schemas, generated artefacts, user behaviour]
 Options:
-1. [Option A] - trade-off.
-2. [Option B] - trade-off.
-3. [Option C] - trade-off.
-Recommendation: [one option] because [technical reason].
-Default if you do not choose: [safe fallback].
-Impact: [files, behaviour, and tests affected].
+1. [Option A] - benefit, cost, and risk.
+2. [Option B] - benefit, cost, and risk.
+3. [Option C] - benefit, cost, and risk.
+Risk check:
+- Architecture: [dependency direction, coupling, source of truth, compatibility]
+- Security: [permissions, secrets, auth, injection, data exposure, trust boundaries]
+- Maintainability: [complexity, ownership, naming, future change cost]
+- Testing: [unit/integration/e2e coverage, fixtures, mocks, determinism]
+- Observability: [logs, audit trail, metrics, debuggability]
+- Performance: [runtime, CI time, memory, network, cost]
+- Rollback: [how to revert safely, data-loss risk, migration reversibility]
+Recommendation: [one option] because [concrete technical reason]
+Default if you do not choose: [safest fallback]
+Validation: [exact checks that prove the selected option works]
+Impact: [what changes, what stays unchanged, and who/what is affected]
 
 Wait for the user's choice before continuing.
 
@@ -230,7 +241,7 @@ If a material decision is made without asking:
 
 ## Security — sensitive files
 - NEVER read, display, suggest edits to, or include content from these files:
-  - Environment: `.env`, `.env.local`, `.env.development`, `.env.production`, `.env.staging`, `.env.ci`, `.envrc` (excludes `.env.example`, `.env.sample`, `.env.template`)
+  - Environment: `.env`, `.env.local`, `.env.development`, `.env.production`, `.env.staging`, `.env.ci`, `.env.test`, `.envrc` (excludes `.env.example`, `.env.sample`, `.env.template`)
   - App config: `settings_local.php`, `settings.ci.php`, `app_local.php`, `app.ci.php`
   - Keys/certs: `*.pem`, `*.key`, `id_rsa`, `id_ed25519`
   - Credentials: `.npmrc`, `.pypirc`, `.netrc`, `.aws/credentials`, `.azure/*`

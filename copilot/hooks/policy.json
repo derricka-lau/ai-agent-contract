@@ -1,11 +1,11 @@
 {
   "version": 1,
   "hooks": {
-    "preToolUse": [
+    "PreToolUse": [
       {
         "type": "command",
-        "bash": "$HOME/.copilot/hooks/pre-tool-guard.sh",
-        "timeoutSec": 15
+        "command": "$HOME/.copilot/hooks/pre-tool-guard.sh",
+        "timeout": 15
       }
     ]
   }
