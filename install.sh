@@ -160,6 +160,15 @@ else
   FAIL=$((FAIL+1))
 fi
 
+# 1b. Core policy and deterministic guardrail coverage
+if bash "$SCRIPT_DIR/scripts/check-core-policy.sh" >/dev/null 2>&1; then
+  echo "  [PASS] Core policy and sensitive-file guardrail checks passed"
+  PASS=$((PASS+1))
+else
+  echo "  [FAIL] Core policy or sensitive-file guardrail check failed"
+  FAIL=$((FAIL+1))
+fi
+
 # 2. Codex baseline config
 if grep -q 'model = "gpt-5.4"' ~/.codex/config.toml 2>/dev/null && grep -q 'codex_hooks = true' ~/.codex/config.toml 2>/dev/null; then
   echo "  [PASS] Codex baseline config active"

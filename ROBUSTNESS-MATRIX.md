@@ -32,6 +32,8 @@ This document defines the hardened baseline and parity map across the three conf
 
 | Capability | Source path |
 |---|---|
+| Canonical decision protocol | `core/DECISION_LEDGER.md` |
+| Canonical sensitive-file policy | `core/SENSITIVE_FILE_POLICY.md` |
 | Global behaviour contract | `claude/CLAUDE.md`, `codex/AGENTS.md`, `copilot/AGENTS.md` |
 | Memory context | `claude/MEMORY.md`, `codex/MEMORY.md`, `copilot/MEMORY.md` |
 | Shared skills | `skills/*/SKILL.md` |
@@ -58,6 +60,8 @@ This document defines the hardened baseline and parity map across the three conf
 `install.sh` should verify the following at minimum:
 
 - Instructions and contracts are installed for all three.
+- The canonical Decision Ledger fields are present in all always-on instruction files.
+- Sensitive-file access is blocked by deterministic settings or hooks where each platform supports it.
 - Persona files are present for all three.
 - Guardrails (hooks and wrappers) are present and executable where applicable.
 - Shared skills, memory, and prompts are present for all three.

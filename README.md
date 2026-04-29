@@ -16,6 +16,9 @@ One `install.sh` configures Claude Code, Codex CLI, and Copilot CLI with a share
 
 ```
 dotfiles/
+├── core/
+│   ├── DECISION_LEDGER.md         # Canonical trade-off decision protocol
+│   └── SENSITIVE_FILE_POLICY.md   # Canonical deterministic secret-file policy
 ├── claude/
 │   ├── settings.json              # Deny rules + effortLevel + autoMemory (deterministic)
 │   ├── CLAUDE.md                  # Global contract + common commands
@@ -77,6 +80,8 @@ dotfiles/
 │   └── typescript-react/          # TypeScript/React conventions
 ├── prompts/
 │   └── workflow.md                # Multi-tool workflow prompt templates
+├── scripts/
+│   └── check-core-policy.sh       # Drift and guardrail coverage check
 ├── gitconfig                      # Global git config (Cardiff email default)
 ├── gitconfig-github               # Conditional include (GitHub noreply email)
 ├── codex-safe                     # Wrapper enforcing approved Codex profiles
@@ -120,7 +125,7 @@ cd ~/dotfiles
 4. Configure git with conditional email (GitHub noreply / GitLab Cardiff)
 5. Set `COPILOT_CUSTOM_INSTRUCTIONS_DIRS` env var for Copilot CLI (`~/.copilot` and `~/.copilot/instructions`)
 6. Optionally install system-level managed settings (requires sudo on macOS)
-7. Run 15 verification checks and report results
+7. Run 16 verification checks and report results
 
 ### VSCode devcontainers (automatic)
 
@@ -178,7 +183,7 @@ Every devcontainer will automatically clone this repo and run `install-devcontai
 | **Codex CLI** | `hooks.json` + shell hooks block dangerous commands and premature completion | Yes — hook gate | `ls ~/.codex/hooks.json ~/.codex/hooks/` |
 | **Codex CLI** | `codex-safe` wrapper allows only approved profiles | Yes — shell gate | `codex-safe --profile foo --help` (should exit 64) |
 | **Copilot CLI** | `copilot-safe` wrapper denies dangerous shell tools and blocks `--allow-all` / `--yolo` | Yes — shell gate (when using wrapper) | `copilot-safe --allow-all` (should exit 64) |
-| **Copilot agents** | `~/.copilot/hooks/policy.json` + `pre-tool-guard.sh` block dangerous commands in pre-tool hook | Yes — hook gate when hooks are enabled | `ls ~/.copilot/hooks/policy.json ~/.copilot/hooks/pre-tool-guard.sh` |
+| **Copilot agents** | `~/.copilot/hooks/policy.json` + `pre-tool-guard.sh` block dangerous commands and sensitive file access in pre-tool hook | Yes — hook gate when hooks are enabled | `ls ~/.copilot/hooks/policy.json ~/.copilot/hooks/pre-tool-guard.sh` |
 | **Copilot** | Instructions in `.instructions.md` (extension) + `copilot-instructions.md` (CLI) | Guidance layer | `ls ~/.copilot/instructions/ ~/.copilot/copilot-instructions.md` |
 
 Blocked files:
@@ -194,6 +199,7 @@ Blocked files:
 | # | Check | What it verifies |
 |---|---|---|
 | 1 | Claude Code deny rules | `Read(**/.env)` in `~/.claude/settings.json` |
+| 1b | Core policy and guardrail coverage | `scripts/check-core-policy.sh` passes |
 | 2 | Codex baseline config | `model = "gpt-5.4"` and `codex_hooks = true` in `~/.codex/config.toml` |
 | 3 | Codex global_lockdown profile | `default_permissions = "global_lockdown"` in `~/.codex/config.toml` |
 | 4 | codex-safe wrapper | Executable at `~/.local/bin/codex-safe` |
