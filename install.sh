@@ -1,385 +1,242 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
-# --- Preflight checks ---
-echo "=== Preflight checks ==="
-if ! command -v git &> /dev/null; then
-  echo "ERROR: Missing required tool: git"
-  echo "Install git before running this script."
-  exit 1
-fi
-echo "Git found."
+log() {
+  printf '%s\n' "$1"
+}
 
-run_with_privilege() {
-  if [ "$(id -u)" -eq 0 ]; then
-    "$@"
-  elif command -v sudo &> /dev/null; then
-    sudo "$@"
-  else
-    echo "ERROR: This script needs root/sudo privileges to install missing packages."
+need_command() {
+  if ! command -v "$1" >/dev/null 2>&1; then
+    log "ERROR: missing required command: $1"
     exit 1
   fi
 }
 
-ensure_node_npm() {
-  if command -v node &> /dev/null && command -v npm &> /dev/null; then
-    echo "Node/npm found."
-    return
-  fi
+install_npm_cli() {
+  local package="$1"
+  local label="$2"
+  local post_message="${3:-}"
 
-  echo "Node/npm not found. Installing via apt-get..."
-  if ! command -v apt-get &> /dev/null; then
-    echo "ERROR: node/npm are missing and apt-get is unavailable in this environment."
-    exit 1
-  fi
-
-  run_with_privilege apt-get update
-  run_with_privilege apt-get install -y nodejs npm
-
-  if ! command -v node &> /dev/null || ! command -v npm &> /dev/null; then
-    echo "ERROR: node/npm installation failed."
-    exit 1
-  fi
-
-  echo "Node/npm installed."
+  log "Installing/updating ${label} CLI to latest..."
+  npm install -g "${package}@latest"
+  log "${label} CLI installed.${post_message}"
 }
 
-ensure_node_npm
+backup_existing() {
+  local backup_dir="$HOME/.dotfiles-backup/$(date +%Y%m%d-%H%M%S)"
+  local backed_up=false
+  local targets=(
+    "$HOME/.claude"
+    "$HOME/.codex"
+    "$HOME/.copilot"
+    "$HOME/.agents/skills"
+    "$HOME/.local/bin/codex-safe"
+    "$HOME/.local/bin/copilot-safe"
+    "$HOME/.local/share/dotfiles"
+    "$HOME/.git-hooks"
+    "$HOME/.gitconfig"
+    "$HOME/.gitconfig-github"
+    "$HOME/.dotfiles-manifest"
+  )
 
-echo ""
-echo "=== Installing dotfiles ==="
-echo "NOTE: All existing config files will be overwritten (not merged)."
-
-# --- Backup existing config ---
-BACKUP_DIR="$HOME/.dotfiles-backup/$(date +%Y%m%d-%H%M%S)"
-BACKED_UP=false
-for f in \
-  ~/.claude/settings.json \
-  ~/.claude/CLAUDE.md \
-  ~/.claude/MEMORY.md \
-  ~/.claude/memory/user_role.md \
-  ~/.claude/prompts/workflow.md \
-  ~/.claude/agents/*.md \
-  ~/.codex/config.toml \
-  ~/.codex/AGENTS.md \
-  ~/.codex/MEMORY.md \
-  ~/.codex/hooks.json \
-  ~/.codex/memory/user_role.md \
-  ~/.codex/prompts/workflow.md \
-  ~/.codex/agents/*.toml \
-  ~/.codex/hooks/*.sh \
-  ~/.copilot/instructions/*.instructions.md \
-  ~/.copilot/copilot-instructions.md \
-  ~/.copilot/AGENTS.md \
-  ~/.copilot/agents/*.agent.md \
-  ~/.copilot/hooks/*.json \
-  ~/.copilot/hooks/*.sh \
-  ~/.copilot/MEMORY.md \
-  ~/.copilot/memory/user_role.md \
-  ~/.copilot/prompts/workflow.md \
-  ~/.claude/skills/*/SKILL.md \
-  ~/.codex/skills/*/SKILL.md \
-  ~/.agents/skills/*/SKILL.md \
-  ~/.copilot/skills/*/SKILL.md \
-  ~/.local/bin/copilot-safe \
-  ~/.gitconfig \
-  ~/.gitconfig-github; do
-  if [ -f "$f" ]; then
-    if [ "$BACKED_UP" = false ]; then
-      mkdir -p "$BACKUP_DIR"
-      echo "Backing up existing config to $BACKUP_DIR"
-      BACKED_UP=true
+  for target in "${targets[@]}"; do
+    if [ -e "$target" ]; then
+      if [ "$backed_up" = false ]; then
+        mkdir -p "$backup_dir"
+        log "Backing up existing config to $backup_dir"
+        backed_up=true
+      fi
+      cp -a "$target" "$backup_dir/"
     fi
-    cp "$f" "$BACKUP_DIR/"
+  done
+
+  if [ "$backed_up" = true ]; then
+    log "Backup complete: $backup_dir"
   fi
-done
-if [ "$BACKED_UP" = true ]; then
-  echo "Backup complete. Restore with: cp $BACKUP_DIR/* to their original locations."
-fi
+}
 
-bash "$SCRIPT_DIR/install-claude.sh"
-bash "$SCRIPT_DIR/install-codex.sh"
-bash "$SCRIPT_DIR/install-copilot.sh"
+copy_tree() {
+  local source="$1"
+  local target="$2"
 
-# --- Git config ---
-echo ""
-echo "--- Git ---"
-cp "$SCRIPT_DIR/gitconfig" ~/.gitconfig
-cp "$SCRIPT_DIR/gitconfig-github" ~/.gitconfig-github
-echo "Git config installed (Cardiff email default, GitHub noreply for github.com remotes)."
+  mkdir -p "$target"
+  cp -a "$source"/. "$target"/
+}
 
-# --- Git hooks (global template) ---
-echo ""
-echo "--- Git hooks ---"
-GIT_HOOKS_DIR="$HOME/.git-hooks"
-mkdir -p "$GIT_HOOKS_DIR"
-cp "$SCRIPT_DIR/hooks/pre-commit" "$GIT_HOOKS_DIR/pre-commit"
-cp "$SCRIPT_DIR/hooks/pre-push" "$GIT_HOOKS_DIR/pre-push"
-chmod +x "$GIT_HOOKS_DIR/pre-commit" "$GIT_HOOKS_DIR/pre-push"
-git config --global core.hooksPath "$GIT_HOOKS_DIR"
-echo "Git hooks installed globally (core.hooksPath = $GIT_HOOKS_DIR)."
+copy_skills() {
+  local target="$1"
 
-# Detect the user's actual shell rc file
-case "$SHELL" in
-  */zsh)  SHELL_RC="$HOME/.zshrc" ;;
-  */bash) SHELL_RC="$HOME/.bashrc" ;;
-  *)      SHELL_RC="$HOME/.profile" ;;
-esac
-touch "$SHELL_RC"
+  mkdir -p "$target"
+  for skill_dir in "$SCRIPT_DIR"/skills/*; do
+    [ -d "$skill_dir" ] || continue
+    mkdir -p "$target/$(basename "$skill_dir")"
+    cp "$skill_dir/SKILL.md" "$target/$(basename "$skill_dir")/SKILL.md"
+  done
+}
 
-# Ensure ~/.local/bin is on PATH
-if ! echo "$PATH" | grep -q "$HOME/.local/bin"; then
-  echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$SHELL_RC"
-  echo "Added ~/.local/bin to PATH in $SHELL_RC"
-fi
+write_manifest() {
+  local manifest="$HOME/.dotfiles-manifest"
 
-# Ensure COPILOT_CUSTOM_INSTRUCTIONS_DIRS includes both ~/.copilot and ~/.copilot/instructions
-COPILOT_DIRS_EXPORT='export COPILOT_CUSTOM_INSTRUCTIONS_DIRS="$HOME/.copilot,$HOME/.copilot/instructions"'
-if ! grep -q 'COPILOT_CUSTOM_INSTRUCTIONS_DIRS' "$SHELL_RC" 2>/dev/null; then
-  echo "$COPILOT_DIRS_EXPORT" >> "$SHELL_RC"
-  echo "Added COPILOT_CUSTOM_INSTRUCTIONS_DIRS to $SHELL_RC"
-elif ! grep -q '\$HOME/.copilot,\$HOME/.copilot/instructions' "$SHELL_RC" 2>/dev/null; then
-  echo "$COPILOT_DIRS_EXPORT" >> "$SHELL_RC"
-  echo "Updated COPILOT_CUSTOM_INSTRUCTIONS_DIRS in $SHELL_RC"
-fi
+  : > "$manifest"
+  for target in \
+    "$HOME/.claude" \
+    "$HOME/.codex" \
+    "$HOME/.copilot" \
+    "$HOME/.agents/skills" \
+    "$HOME/.local/bin/codex-safe" \
+    "$HOME/.local/bin/copilot-safe" \
+    "$HOME/.local/share/dotfiles" \
+    "$HOME/.git-hooks" \
+    "$HOME/.gitconfig" \
+    "$HOME/.gitconfig-github"; do
+    if [ -f "$target" ]; then
+      shasum -a 256 "$target" >> "$manifest"
+    elif [ -d "$target" ]; then
+      find "$target" -type f -print0 | sort -z | xargs -0 shasum -a 256 >> "$manifest"
+    fi
+  done
+  log "Manifest written to $manifest"
+}
 
-# --- Verification ---
-echo ""
-echo "=== Verification ==="
-PASS=0
-FAIL=0
+ensure_shell_exports() {
+  local shell_rc
+  case "${SHELL:-}" in
+    */zsh) shell_rc="$HOME/.zshrc" ;;
+    */bash) shell_rc="$HOME/.bashrc" ;;
+    *) shell_rc="$HOME/.profile" ;;
+  esac
 
-# 1. Claude Code deny rules
-if grep -q 'Read(\*\*/.env)' ~/.claude/settings.json 2>/dev/null; then
-  echo "  [PASS] Claude Code deny rules active"
-  PASS=$((PASS+1))
-else
-  echo "  [FAIL] Claude Code deny rules missing"
-  FAIL=$((FAIL+1))
-fi
+  touch "$shell_rc"
 
-# 1b. Core policy and deterministic guardrail coverage
-if bash "$SCRIPT_DIR/scripts/check-core-policy.sh" >/dev/null 2>&1; then
-  echo "  [PASS] Core policy and sensitive-file guardrail checks passed"
-  PASS=$((PASS+1))
-else
-  echo "  [FAIL] Core policy or sensitive-file guardrail check failed"
-  FAIL=$((FAIL+1))
-fi
-
-# 2. Codex baseline config
-if grep -q 'model = "gpt-5.4"' ~/.codex/config.toml 2>/dev/null && grep -q 'codex_hooks = true' ~/.codex/config.toml 2>/dev/null; then
-  echo "  [PASS] Codex baseline config active"
-  PASS=$((PASS+1))
-else
-  echo "  [FAIL] Codex baseline config missing expected defaults"
-  FAIL=$((FAIL+1))
-fi
-
-# 3. Codex permissions profile
-if grep -q 'default_permissions = "global_lockdown"' ~/.codex/config.toml 2>/dev/null; then
-  echo "  [PASS] Codex global_lockdown profile active"
-  PASS=$((PASS+1))
-else
-  echo "  [FAIL] Codex global_lockdown profile missing"
-  FAIL=$((FAIL+1))
-fi
-
-# 4. codex-safe wrapper
-if [ -x ~/.local/bin/codex-safe ]; then
-  echo "  [PASS] codex-safe wrapper installed and executable"
-  PASS=$((PASS+1))
-else
-  echo "  [FAIL] codex-safe wrapper missing or not executable"
-  FAIL=$((FAIL+1))
-fi
-
-# 5. codex-safe blocks unapproved profiles (must exit 64)
-EXIT_CODE=0
-~/.local/bin/codex-safe --profile foo --help 2>/dev/null || EXIT_CODE=$?
-if [ "$EXIT_CODE" -eq 64 ]; then
-  echo "  [PASS] codex-safe blocks unapproved profiles (exit 64)"
-  PASS=$((PASS+1))
-else
-  echo "  [FAIL] codex-safe did not exit 64 (got $EXIT_CODE)"
-  FAIL=$((FAIL+1))
-fi
-
-# 6. Codex hooks installed
-if [ -f ~/.codex/hooks.json ] && [ -x ~/.codex/hooks/pre-command-guard.sh ] && [ -x ~/.codex/hooks/stop-reminder.sh ]; then
-  echo "  [PASS] Codex hooks installed"
-  PASS=$((PASS+1))
-else
-  echo "  [FAIL] Codex hooks missing"
-  FAIL=$((FAIL+1))
-fi
-
-# 7. Copilot instructions present (VS Code extension + CLI)
-if [ -f ~/.copilot/instructions/global-contract.instructions.md ] && [ -f ~/.copilot/instructions/backend.instructions.md ] && [ -f ~/.copilot/instructions/frontend.instructions.md ] && [ -f ~/.copilot/instructions/tests.instructions.md ] && [ -f ~/.copilot/copilot-instructions.md ]; then
-  echo "  [PASS] Copilot instructions present (extension + CLI)"
-  PASS=$((PASS+1))
-else
-  echo "  [FAIL] Copilot instructions missing"
-  FAIL=$((FAIL+1))
-fi
-
-# 8. Copilot custom agents installed
-if [ -f ~/.copilot/agents/architect.agent.md ] && [ -f ~/.copilot/agents/implementer.agent.md ] && [ -f ~/.copilot/agents/reviewer.agent.md ] && [ -f ~/.copilot/agents/security-reviewer.agent.md ]; then
-  echo "  [PASS] Copilot custom agents installed"
-  PASS=$((PASS+1))
-else
-  echo "  [FAIL] Copilot custom agents missing"
-  FAIL=$((FAIL+1))
-fi
-
-# 9. Copilot deterministic safety controls
-if [ -f ~/.copilot/hooks/policy.json ] && [ -x ~/.copilot/hooks/pre-tool-guard.sh ] && [ -x ~/.local/bin/copilot-safe ]; then
-  echo "  [PASS] Copilot safety controls installed (hook guard + safe wrapper)"
-  PASS=$((PASS+1))
-else
-  echo "  [FAIL] Copilot safety controls missing"
-  FAIL=$((FAIL+1))
-fi
-
-# 10. Shared memory and workflow prompts installed (all three tools)
-if [ -f ~/.claude/MEMORY.md ] && [ -f ~/.claude/memory/user_role.md ] && [ -f ~/.claude/prompts/workflow.md ] && \
-   [ -f ~/.codex/MEMORY.md ] && [ -f ~/.codex/memory/user_role.md ] && [ -f ~/.codex/prompts/workflow.md ] && \
-   [ -f ~/.copilot/MEMORY.md ] && [ -f ~/.copilot/memory/user_role.md ] && [ -f ~/.copilot/prompts/workflow.md ]; then
-  echo "  [PASS] Shared memory and workflow prompts installed (Claude, Codex, Copilot)"
-  PASS=$((PASS+1))
-else
-  echo "  [FAIL] Shared memory/workflow prompts missing for one or more tools"
-  FAIL=$((FAIL+1))
-fi
-
-# 11. Git conditional email
-if grep -q 'hasconfig:remote' ~/.gitconfig 2>/dev/null; then
-  echo "  [PASS] Git conditional include for GitHub noreply active"
-  PASS=$((PASS+1))
-else
-  echo "  [FAIL] Git conditional include missing"
-  FAIL=$((FAIL+1))
-fi
-
-# 12. Skills installed across all three tools
-CLAUDE_SKILLS=$(ls -1d ~/.claude/skills/*/SKILL.md 2>/dev/null | wc -l | tr -d ' ')
-CODEX_SKILLS=$(ls -1d ~/.codex/skills/*/SKILL.md 2>/dev/null | wc -l | tr -d ' ')
-CODEX_COMPAT_SKILLS=$(ls -1d ~/.agents/skills/*/SKILL.md 2>/dev/null | wc -l | tr -d ' ')
-COPILOT_SKILLS=$(ls -1d ~/.copilot/skills/*/SKILL.md 2>/dev/null | wc -l | tr -d ' ')
-if [ "$CLAUDE_SKILLS" -ge 12 ] && [ "$CODEX_SKILLS" -ge 12 ] && [ "$COPILOT_SKILLS" -ge 12 ]; then
-  echo "  [PASS] Skills installed: Claude($CLAUDE_SKILLS) Codex($CODEX_SKILLS) Copilot($COPILOT_SKILLS) CompatibilityMirror($CODEX_COMPAT_SKILLS)"
-  PASS=$((PASS+1))
-else
-  echo "  [FAIL] Skills missing: Claude($CLAUDE_SKILLS) Codex($CODEX_SKILLS) Copilot($COPILOT_SKILLS) — expected at least 12 each"
-  FAIL=$((FAIL+1))
-fi
-
-# 13. Subagents / custom agents (Claude + Codex + Copilot)
-if [ -f ~/.claude/agents/reviewer.md ] && [ -f ~/.claude/agents/architect.md ] && [ -f ~/.claude/agents/implementer.md ] && [ -f ~/.claude/agents/security-reviewer.md ] && [ -f ~/.codex/agents/explorer.toml ] && [ -f ~/.codex/agents/implementer.toml ] && [ -f ~/.codex/agents/reviewer.toml ] && [ -f ~/.codex/agents/security.toml ] && [ -f ~/.copilot/agents/architect.agent.md ] && [ -f ~/.copilot/agents/implementer.agent.md ] && [ -f ~/.copilot/agents/reviewer.agent.md ] && [ -f ~/.copilot/agents/security-reviewer.agent.md ]; then
-  echo "  [PASS] Role agents installed across Claude, Codex, and Copilot"
-  PASS=$((PASS+1))
-else
-  echo "  [FAIL] Role agents missing for one or more tools"
-  FAIL=$((FAIL+1))
-fi
-
-# 14. Copilot AGENTS.md
-if [ -f ~/.copilot/AGENTS.md ]; then
-  echo "  [PASS] Copilot AGENTS.md installed"
-  PASS=$((PASS+1))
-else
-  echo "  [FAIL] Copilot AGENTS.md missing"
-  FAIL=$((FAIL+1))
-fi
-
-# 15. Git hooks (global)
-HOOKS_PATH="$(git config --global core.hooksPath 2>/dev/null || true)"
-if [ -n "$HOOKS_PATH" ] && [ -x "$HOOKS_PATH/pre-commit" ] && [ -x "$HOOKS_PATH/pre-push" ]; then
-  echo "  [PASS] Git hooks installed globally (pre-commit + pre-push at $HOOKS_PATH)"
-  PASS=$((PASS+1))
-else
-  echo "  [FAIL] Git hooks missing or not executable"
-  FAIL=$((FAIL+1))
-fi
-
-# 16. Claude Code managed settings (bypass disabled)
-if [ -f "/Library/Application Support/ClaudeCode/managed-settings.json" ] && grep -q 'disableBypassPermissionsMode' "/Library/Application Support/ClaudeCode/managed-settings.json" 2>/dev/null; then
-  echo "  [PASS] Claude Code bypass permissions disabled (managed settings)"
-  PASS=$((PASS+1))
-else
-  echo "  [WARN] Claude Code managed settings not installed (optional — requires sudo)"
-fi
-
-echo ""
-echo "Results: $PASS passed, $FAIL failed"
-
-if [ "$FAIL" -gt 0 ]; then
-  echo "WARNING: Some checks failed. Review output above."
-fi
-
-# --- Write manifest of installed file hashes ---
-MANIFEST="$HOME/.dotfiles-manifest"
-: > "$MANIFEST"
-for f in \
-  ~/.claude/settings.json \
-  ~/.claude/CLAUDE.md \
-  ~/.claude/MEMORY.md \
-  ~/.claude/memory/user_role.md \
-  ~/.claude/prompts/workflow.md \
-  ~/.codex/config.toml \
-  ~/.codex/AGENTS.md \
-  ~/.codex/MEMORY.md \
-  ~/.codex/hooks.json \
-  ~/.codex/memory/user_role.md \
-  ~/.codex/prompts/workflow.md \
-  ~/.local/bin/codex-safe \
-  ~/.local/bin/copilot-safe \
-  ~/.copilot/copilot-instructions.md \
-  ~/.copilot/AGENTS.md \
-  ~/.copilot/MEMORY.md \
-  ~/.copilot/memory/user_role.md \
-  ~/.copilot/prompts/workflow.md \
-  ~/.gitconfig \
-  ~/.gitconfig-github \
-  "/Library/Application Support/ClaudeCode/managed-settings.json"; do
-  if [ -f "$f" ]; then
-    shasum -a 256 "$f" >> "$MANIFEST"
+  if ! printf '%s' "$PATH" | grep -q "$HOME/.local/bin"; then
+    printf '%s\n' 'export PATH="$HOME/.local/bin:$PATH"' >> "$shell_rc"
+    log "Added ~/.local/bin to PATH in $shell_rc"
   fi
-done
 
-for hook_file in ~/.git-hooks/pre-commit ~/.git-hooks/pre-push; do
-  if [ -f "$hook_file" ]; then
-    shasum -a 256 "$hook_file" >> "$MANIFEST"
+  local copilot_dirs='export COPILOT_CUSTOM_INSTRUCTIONS_DIRS="$HOME/.copilot,$HOME/.copilot/instructions"'
+  if ! grep -q 'COPILOT_CUSTOM_INSTRUCTIONS_DIRS' "$shell_rc" 2>/dev/null; then
+    printf '%s\n' "$copilot_dirs" >> "$shell_rc"
+    log "Added COPILOT_CUSTOM_INSTRUCTIONS_DIRS to $shell_rc"
   fi
-done
+}
 
-for instruction_file in ~/.copilot/instructions/*.instructions.md; do
-  if [ -f "$instruction_file" ]; then
-    shasum -a 256 "$instruction_file" >> "$MANIFEST"
+verify_installed() {
+  local pass=0
+  local fail=0
+
+  check() {
+    local label="$1"
+    shift
+
+    if "$@" >/dev/null 2>&1; then
+      log "  [PASS] $label"
+      pass=$((pass + 1))
+    else
+      log "  [FAIL] $label"
+      fail=$((fail + 1))
+    fi
+  }
+
+  log ""
+  log "=== Verification ==="
+  check "Canonical sources render generated outputs" node "$SCRIPT_DIR/scripts/generate.js" --check
+  check "Doctor checks pass" node "$SCRIPT_DIR/scripts/doctor.js"
+  check "Claude instructions installed" test -f "$HOME/.claude/CLAUDE.md"
+  check "Claude deny rules installed" grep -Fq 'Read(**/.env.local)' "$HOME/.claude/settings.json"
+  check "Codex config installed" test -f "$HOME/.codex/config.toml"
+  check "Codex guard profile installed" grep -Fq 'default_permissions = "global_lockdown"' "$HOME/.codex/config.toml"
+  check "Copilot instructions installed" test -f "$HOME/.copilot/instructions/global-contract.instructions.md"
+  check "Copilot hook installed" test -x "$HOME/.copilot/hooks/pre-tool-guard.sh"
+  check "Shared guard installed" test -f "$HOME/.local/share/dotfiles/guard.js"
+  check "Role agents installed" test -f "$HOME/.copilot/agents/security-reviewer.agent.md"
+  check "Skills installed" test -f "$HOME/.copilot/skills/php-cakephp/SKILL.md"
+  check "Git hooks installed" test -x "$HOME/.git-hooks/pre-commit"
+  check "codex-safe installed" test -x "$HOME/.local/bin/codex-safe"
+  check "copilot-safe installed" test -x "$HOME/.local/bin/copilot-safe"
+
+  local hook_output
+  hook_output="$(printf '%s' '{"tool_name":"readFile","tool_input":{"path":".env.local"}}' | "$HOME/.copilot/hooks/pre-tool-guard.sh")"
+  if [[ "$hook_output" == *'"permissionDecision":"deny"'* ]]; then
+    log "  [PASS] Copilot hook denies .env.local"
+    pass=$((pass + 1))
+  else
+    log "  [FAIL] Copilot hook denies .env.local"
+    fail=$((fail + 1))
   fi
-done
 
-for agent_file in ~/.claude/agents/*.md ~/.codex/agents/*.toml ~/.copilot/agents/*.agent.md; do
-  if [ -f "$agent_file" ]; then
-    shasum -a 256 "$agent_file" >> "$MANIFEST"
+  log ""
+  log "Results: $pass passed, $fail failed"
+
+  if [ "$fail" -gt 0 ]; then
+    exit 1
   fi
-done
+}
 
-for hook_file in ~/.codex/hooks/*.sh ~/.copilot/hooks/*.sh ~/.copilot/hooks/*.json; do
-  if [ -f "$hook_file" ]; then
-    shasum -a 256 "$hook_file" >> "$MANIFEST"
-  fi
-done
+main() {
+  log "=== Preflight checks ==="
+  need_command git
+  need_command node
+  need_command npm
+  need_command mktemp
+  log "Git, node, and npm found."
 
-# Add all skill files to manifest
-for skill_file in ~/.claude/skills/*/SKILL.md ~/.codex/skills/*/SKILL.md ~/.agents/skills/*/SKILL.md ~/.copilot/skills/*/SKILL.md; do
-  if [ -f "$skill_file" ]; then
-    shasum -a 256 "$skill_file" >> "$MANIFEST"
-  fi
-done
-echo "Manifest written to $MANIFEST"
+  node "$SCRIPT_DIR/scripts/generate.js" --check
+  node "$SCRIPT_DIR/scripts/doctor.js"
 
-echo ""
-echo "=== Done. Claude Code, Codex CLI, and Copilot are configured. ==="
+  local generated_dir
+  generated_dir="$(mktemp -d)"
+  trap 'rm -rf "${generated_dir:-}"' EXIT
+  node "$SCRIPT_DIR/scripts/generate.js" --out "$generated_dir"
+
+  log ""
+  log "=== Installing dotfiles ==="
+  log "NOTE: Managed targets are backed up, then overwritten from generated outputs."
+
+  backup_existing
+
+  mkdir -p \
+    "$HOME/.claude" "$HOME/.claude/memory" "$HOME/.claude/prompts" "$HOME/.claude/agents" "$HOME/.claude/skills" \
+    "$HOME/.codex" "$HOME/.codex/memory" "$HOME/.codex/prompts" "$HOME/.codex/agents" "$HOME/.codex/hooks" "$HOME/.codex/skills" \
+    "$HOME/.copilot" "$HOME/.copilot/memory" "$HOME/.copilot/prompts" "$HOME/.copilot/agents" "$HOME/.copilot/hooks" "$HOME/.copilot/instructions" "$HOME/.copilot/skills" \
+    "$HOME/.agents/skills" "$HOME/.local/bin" "$HOME/.local/share/dotfiles"
+
+  copy_tree "$generated_dir/claude" "$HOME/.claude"
+  copy_tree "$generated_dir/codex" "$HOME/.codex"
+  copy_tree "$generated_dir/copilot" "$HOME/.copilot"
+  copy_skills "$HOME/.claude/skills"
+  copy_skills "$HOME/.codex/skills"
+  copy_skills "$HOME/.copilot/skills"
+  copy_skills "$HOME/.agents/skills"
+
+  cp "$SCRIPT_DIR/scripts/guard.js" "$HOME/.local/share/dotfiles/guard.js"
+  cp "$SCRIPT_DIR/core/guardrails.json" "$HOME/.local/share/dotfiles/guardrails.json"
+  chmod +x "$HOME/.local/share/dotfiles/guard.js"
+
+  cp "$SCRIPT_DIR/codex-safe" "$HOME/.local/bin/codex-safe"
+  cp "$SCRIPT_DIR/copilot-safe" "$HOME/.local/bin/copilot-safe"
+  chmod +x "$HOME/.local/bin/codex-safe" "$HOME/.local/bin/copilot-safe"
+  chmod +x "$HOME/.codex/hooks/pre-command-guard.sh" "$HOME/.codex/hooks/stop-reminder.sh" "$HOME/.copilot/hooks/pre-tool-guard.sh"
+
+  install_npm_cli "@anthropic-ai/claude-code" "Claude Code"
+  install_npm_cli "@openai/codex" "Codex"
+  install_npm_cli "@github/copilot" "Copilot" " Run 'copilot' then '/login' to authenticate."
+
+  cp "$SCRIPT_DIR/gitconfig" "$HOME/.gitconfig"
+  cp "$SCRIPT_DIR/gitconfig-github" "$HOME/.gitconfig-github"
+  mkdir -p "$HOME/.git-hooks"
+  cp "$SCRIPT_DIR/hooks/pre-commit" "$HOME/.git-hooks/pre-commit"
+  cp "$SCRIPT_DIR/hooks/pre-push" "$HOME/.git-hooks/pre-push"
+  chmod +x "$HOME/.git-hooks/pre-commit" "$HOME/.git-hooks/pre-push"
+  git config --global core.hooksPath "$HOME/.git-hooks"
+
+  ensure_shell_exports
+  verify_installed
+  write_manifest
+
+  log ""
+  log "=== Done. Dotfiles are generated, installed, and verified. ==="
+}
+
+main "$@"
