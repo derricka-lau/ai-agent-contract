@@ -1,0 +1,42 @@
+{
+  "protectedBaseNames": [
+    ".env",
+    ".env.local",
+    ".env.development",
+    ".env.production",
+    ".env.staging",
+    ".env.ci",
+    ".env.test",
+    ".envrc",
+    "settings_local.php",
+    "settings.ci.php",
+    "app_local.php",
+    "app.ci.php",
+    "id_rsa",
+    "id_ed25519",
+    ".npmrc",
+    ".pypirc",
+    ".netrc"
+  ],
+  "protectedExtensions": [
+    ".pem",
+    ".key"
+  ],
+  "protectedPathFragments": [
+    ".aws/credentials",
+    ".azure/"
+  ],
+  "safeExampleBaseNames": [
+    ".env.example",
+    ".env.sample",
+    ".env.template"
+  ],
+  "dangerousCommandPatterns": [
+    "(^|\\s)rm\\s+-rf\\s+/",
+    "sudo\\s+rm\\s+-rf",
+    "git\\s+reset\\s+--hard",
+    "git\\s+checkout\\s+--\\s+",
+    "chmod\\s+-R\\s+777\\b",
+    "\\bmkfs\\b"
+  ]
+}

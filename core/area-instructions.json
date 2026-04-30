@@ -1,0 +1,32 @@
+{
+  "backend": {
+    "applyTo": "**/*.{php,py,rb,go,java,cs}",
+    "title": "Backend Instructions",
+    "body": [
+      "Prefer framework-native patterns and existing abstractions.",
+      "Use parameterised queries or query builders for all database work.",
+      "Validate input at trust boundaries.",
+      "Keep service boundaries explicit and dependency direction clean."
+    ]
+  },
+  "frontend": {
+    "applyTo": "**/*.{ts,tsx,js,jsx,vue,svelte,css,scss}",
+    "title": "Frontend Instructions",
+    "body": [
+      "Follow the existing design system before creating new patterns.",
+      "Keep state local unless shared state is clearly required.",
+      "Preserve accessibility, keyboard behaviour, and responsive layout.",
+      "Avoid broad visual rewrites unless explicitly requested."
+    ]
+  },
+  "tests": {
+    "applyTo": "**/*{Test,Spec}.{php,ts,tsx,js,jsx,py}",
+    "title": "Test Instructions",
+    "body": [
+      "Prefer behavioural assertions over implementation details.",
+      "Keep test data deterministic and readable.",
+      "Run the smallest relevant test first after each substantive edit.",
+      "Do not weaken coverage by changing include/exclude scope."
+    ]
+  }
+}

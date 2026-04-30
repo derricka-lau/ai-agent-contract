@@ -17,7 +17,7 @@ A material decision is any choice that affects:
 - Performance versus simplicity, compatibility versus cleanup, or maintainability versus speed.
 - Broad mechanical changes across multiple files.
 
-Do not ask "Can I proceed?". Ask the concrete design choice: "Which trade-off do you want?"
+Do not ask `Can I proceed?`. Ask the concrete design choice: `Which trade-off do you want?`
 
 ## Required Format
 
@@ -84,4 +84,4 @@ In `D3`, implementation proceeds as:
 ## Breach Rule
 
 If a material decision is made without asking:
-"Contract breach. Stop. Re-offer the missed decision as options only."
+`Contract breach. Stop. Re-offer the missed decision as options only.`
