@@ -6,7 +6,9 @@ description: Plan and execute the strongest relevant test strategy for a change.
 # Test Strategy
 
 1. Detect available test commands from package.json, Makefile, or CI config.
-2. Run targeted tests for changed areas first.
-3. Escalate to broader suites if scope warrants.
-4. Report failures with likely root causes.
-5. Report any checks that could not run.
+2. Identify the smallest relevant automated test, or add one, that should fail for the requested behaviour before implementation.
+3. Run that targeted failing test first and keep it as the primary feedback loop.
+4. Implement the minimal change that makes the targeted test pass.
+5. Escalate to broader suites if scope warrants.
+6. Report failures with likely root causes.
+7. Report any checks that could not run.

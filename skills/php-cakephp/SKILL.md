@@ -6,6 +6,7 @@ description: PHP and CakePHP coding conventions — testing patterns, code style
 # PHP / CakePHP Conventions
 
 ## Testing
+- For behaviour changes, add or update the smallest failing PHPUnit or integration test first, then implement until it passes.
 - Use `assertSame()` over `assertTrue($x === 'y')` — strict equality, not loose.
 - Use `assertArrayHasKey()` over `assertTrue(isset($arr['key']))`.
 - Always set up CSRF/security tokens for POST request tests.

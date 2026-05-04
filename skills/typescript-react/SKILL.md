@@ -13,6 +13,8 @@ description: TypeScript and React coding conventions — strict typing, function
 
 ## Testing
 - Use the test runner configured in the project (`vitest`, `jest`, or similar).
+- For behaviour changes, write or update the smallest failing test first, then implement until it passes.
+- Start with the narrowest test target the runner supports before using the full suite.
 - Test behaviour, not implementation — assert on rendered output and user interactions.
 
 ## Commands

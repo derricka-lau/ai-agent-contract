@@ -14,10 +14,12 @@ description: Python coding conventions — type hints, testing with pytest, code
 
 ## Testing
 - Use `pytest` as the test runner.
+- For behaviour changes, write or update the smallest failing pytest first, then implement until it passes.
 - Prefer `assert x == y` over `unittest`-style `self.assertEqual`.
 - Use fixtures over `setUp`/`tearDown` where possible.
 
 ## Commands
+- Single test: `pytest path/to/test_file.py::test_name` or `. .venv/bin/activate && pytest path/to/test_file.py::test_name`
 - Test: `pytest` or `. .venv/bin/activate && pytest`
 - Lint: `ruff check .`
 - Format: `ruff format .`

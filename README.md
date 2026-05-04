@@ -1,6 +1,6 @@
 # Dotfiles
 
-Source-driven, deterministic AI coding tool setup for new laptops and devcontainers.
+Source-driven, deterministic AI coding tool setup for new laptops and devcontainers, with mandatory Decision Ledger review and Test-Driven Development (TDD) guardrails.
 
 The repo has one source of truth under `core/`. Tool-specific files for Claude, Codex, and Copilot are generated during install because each tool reads a different format and location.
 
@@ -8,14 +8,14 @@ The repo has one source of truth under `core/`. Tool-specific files for Claude, 
 
 Edit these files first:
 
-- `core/global-contract.md` - shared behaviour contract.
+- `core/global-contract.md` - shared behaviour contract, including Decision Ledger and TDD workflow requirements.
 - `core/decision-ledger.md` - mandatory material-decision protocol.
 - `core/sensitive-files.md` - human-readable sensitive-file policy.
 - `core/guardrails.json` - machine-enforced sensitive-file and dangerous-command policy.
 - `core/roles.json` - canonical architect, implementer, reviewer, and security-reviewer agents.
 - `core/area-instructions.json` - Copilot area-specific instruction files.
-- `core/memory.md`, `core/user-context.md`, `core/workflow.md` - shared memory and workflow prompts.
-- `skills/*/SKILL.md` - canonical shared skills copied to all supported tools.
+- `core/memory.md`, `core/user-context.md`, `core/workflow.md` - shared memory and workflow prompts, including TDD execution flow.
+- `skills/*/SKILL.md` - canonical shared skills copied to all supported tools, including test strategy and validation rules.
 
 After changing `core/*`, run:
 
@@ -45,6 +45,7 @@ Do not edit generated files by hand. Edit `core/*`, then re-run the installer or
 The most important guardrails are:
 
 - Decision Ledger before every material architecture, config, security, data, testing, performance, workflow, or rollback choice.
+- Test-Driven Development (TDD) for behaviour changes: define or add the smallest failing automated test before implementation, or state the no-test rationale explicitly.
 - Deterministic denial of `.env*`, local app config, key/cert, and credential files.
 - Generated Claude deny rules.
 - Generated Codex filesystem deny profile.
@@ -61,7 +62,7 @@ cd ~/dotfiles
 
 The installer:
 
-1. Verifies canonical sources and guardrails.
+1. Verifies canonical sources and guardrails, including Decision Ledger and TDD policy sources.
 2. Backs up managed targets to `~/.dotfiles-backup/<timestamp>/`.
 3. Generates runtime files into a temporary directory.
 4. Copies generated runtime files into `~/.claude`, `~/.codex`, and `~/.copilot`.

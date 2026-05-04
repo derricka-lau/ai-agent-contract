@@ -3,11 +3,12 @@
 ## Standard Flow
 
 1. Restate the task and constraints.
-2. Inspect only the relevant files and commands.
+2. Inspect only the relevant files, commands, and existing tests.
 3. Present a Decision Ledger entry for material choices.
-4. Implement the selected option with minimal diffs.
-5. Run targeted validation first, then broader checks if the scope warrants it.
-6. Report changed files, validations, risks, and unrun checks.
+4. Identify the smallest relevant automated test. If coverage is missing, add or update a test that fails for the requested behaviour before editing implementation. If no automated test is feasible, say why before proceeding.
+5. Implement the selected option with minimal diffs until the focused test passes.
+6. Run targeted validation first, then broader checks if the scope warrants it.
+7. Report changed files, validations, risks, and unrun checks.
 
 ## Review Flow
 
