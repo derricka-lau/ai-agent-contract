@@ -171,6 +171,14 @@ function denyPatterns(guardrails) {
   return readEdit;
 }
 
+function codexProjectRootDenyPatterns(guardrails) {
+  return guardrails.protectedBaseNames;
+}
+
+function codexAbsoluteDenyPatterns(guardrails) {
+  return denyPatterns(guardrails).filter((pattern) => pattern.startsWith('~'));
+}
+
 function claudeSettings(guardrails) {
   const patterns = denyPatterns(guardrails);
   const bashCommands = ['cat', 'head', 'tail', 'less', 'grep', 'source'];
@@ -240,28 +248,26 @@ function claudeSettings(guardrails) {
 }
 
 function codexConfig(guardrails) {
-  const denied = [
-    ...denyPatterns(guardrails),
-    ...guardrails.protectedBaseNames.map((baseName) => baseName),
-  ];
-  const entries = Array.from(new Set(denied))
-    .map((pattern) => `"${pattern}" = "none"`)
+  const projectRootEntries = Array.from(new Set([
+    '.',
+    ...codexProjectRootDenyPatterns(guardrails),
+  ]))
+    .map((pattern) => `"${pattern}" = "${pattern === '.' ? 'write' : 'none'}"`)
     .join(', ');
+  const absoluteEntries = Array.from(new Set(codexAbsoluteDenyPatterns(guardrails)))
+    .map((pattern) => `"${pattern}" = "none"`)
+    .join('\n');
 
   return `${generatedHeader('toml')}model = "gpt-5.3-codex"
 model_reasoning_effort = "xhigh"
 service_tier = "fast"
-sandbox_mode = "workspace-write"
 approval_policy = "on-request"
 web_search = "cached"
 notify = ["terminal-notifier", "-message", "Codex turn complete", "-title", "Codex"]
 default_permissions = "global_lockdown"
 
-[sandbox_workspace_write]
-network_access = false
-
 [features]
-codex_hooks = true
+hooks = true
 multi_agent = true
 shell_snapshot = true
 
@@ -269,7 +275,6 @@ shell_snapshot = true
 model = "gpt-5.4"
 model_reasoning_effort = "high"
 service_tier = "fast"
-sandbox_mode = "workspace-write"
 approval_policy = "on-request"
 web_search = "cached"
 permissions_profile = "global_lockdown"
@@ -279,7 +284,6 @@ model = "gpt-5.4"
 model_reasoning_effort = "high"
 service_tier = "fast"
 approval_policy = "never"
-sandbox_mode = "workspace-write"
 web_search = "cached"
 permissions_profile = "global_lockdown"
 
@@ -287,7 +291,6 @@ permissions_profile = "global_lockdown"
 model = "gpt-5.4-mini"
 model_reasoning_effort = "medium"
 service_tier = "fast"
-sandbox_mode = "workspace-write"
 approval_policy = "on-request"
 web_search = "cached"
 permissions_profile = "global_lockdown"
@@ -296,7 +299,6 @@ permissions_profile = "global_lockdown"
 model = "gpt-5.4"
 model_reasoning_effort = "high"
 service_tier = "fast"
-sandbox_mode = "workspace-write"
 approval_policy = "on-request"
 web_search = "cached"
 permissions_profile = "global_lockdown"
@@ -314,7 +316,11 @@ max_depth = 1
 job_max_runtime_seconds = 1800
 
 [permissions.global_lockdown.filesystem]
-":project_roots" = { "." = "write", ${entries} }
+":project_roots" = { ${projectRootEntries} }
+${absoluteEntries}
+
+[permissions.global_lockdown.network]
+enabled = false
 `;
 }
 
