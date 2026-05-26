@@ -1,8 +1,48 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+self_path="$(readlink -f "$0" 2>/dev/null || printf '%s' "$0")"
 selected_profile=""
 args=()
+
+resolve_codex_binary() {
+  local candidate
+  local resolved
+
+  while IFS= read -r candidate; do
+    [[ -n "$candidate" ]] || continue
+    resolved="$(readlink -f "$candidate" 2>/dev/null || printf '%s' "$candidate")"
+    if [[ "$resolved" != "$self_path" ]]; then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
+  done < <(which -a codex 2>/dev/null | awk '!seen[$0]++')
+
+  echo "codex-safe: unable to resolve the real codex binary." >&2
+  exit 69
+}
+
+probe_needs_full_access_fallback() {
+  local codex_bin="$1"
+  local output
+  local status
+
+  set +e
+  output="$($codex_bin sandbox linux -- /bin/true 2>&1)"
+  status=$?
+  set -e
+
+  if [[ $status -eq 0 ]]; then
+    return 1
+  fi
+
+  if [[ "$output" == *"No permissions to create a new namespace"* ]] || [[ "$output" == *"kernel does not allow non-privileged user namespaces"* ]]; then
+    return 0
+  fi
+
+  printf '%s\n' "$output" >&2
+  exit $status
+}
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -58,4 +98,13 @@ case "$selected_profile" in
     ;;
 esac
 
-exec codex --profile "$selected_profile" "${args[@]}"
+codex_bin="$(resolve_codex_binary)"
+
+if [[ -f /.dockerenv || -f /run/.containerenv ]]; then
+  if probe_needs_full_access_fallback "$codex_bin"; then
+    echo "codex-safe: devcontainer sandbox is unavailable; falling back to danger-full-access." >&2
+    exec "$codex_bin" -c 'sandbox_mode="danger-full-access"' --profile "$selected_profile" "${args[@]}"
+  fi
+fi
+
+exec "$codex_bin" --profile "$selected_profile" "${args[@]}"

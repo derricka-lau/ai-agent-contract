@@ -179,14 +179,14 @@ for (const file of [
 
 requireGeneratedContent('claude/settings.json', claudeReadPattern);
 requireGeneratedContent('claude/settings.json', claudeEditPattern);
-requireGeneratedContent('codex/config.toml', '[permissions.global_lockdown.filesystem]');
-requireGeneratedContent('codex/config.toml', '":project_roots" = {');
-requireGeneratedContent('codex/config.toml', codexProjectRootEnvEntry);
-requireGeneratedContent('codex/config.toml', codexProjectRootAppEntry);
-forbidGeneratedContent('codex/config.toml', '[permissions.global_lockdown.filesystem.":workspace_roots"]');
-forbidGeneratedContent('codex/config.toml', 'glob_scan_max_depth = ');
-forbidGeneratedContent('codex/config.toml', '= "deny"');
-forbidGeneratedContent('codex/config.toml', '"**/');
+requireGeneratedContent('codex/config.toml', 'approval_policy = "on-request"');
+requireGeneratedContent('codex/config.toml', 'sandbox_mode = "workspace-write"');
+requireGeneratedContent('codex/config.toml', '[sandbox_workspace_write]');
+requireGeneratedContent('codex/config.toml', 'network_access = false');
+forbidGeneratedContent('codex/config.toml', 'default_permissions = "global_lockdown"');
+forbidGeneratedContent('codex/config.toml', 'permissions_profile = "global_lockdown"');
+forbidGeneratedContent('codex/config.toml', '[permissions.global_lockdown.filesystem]');
+forbidGeneratedContent('codex/config.toml', '[permissions.global_lockdown.network]');
 
 const denyEnv = guard({ tool_name: 'readFile', tool_input: { path: blockedEnv } });
 if (denyEnv.stdout.includes('"permissionDecision":"deny"')) {

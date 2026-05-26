@@ -247,24 +247,17 @@ function claudeSettings(guardrails) {
   }, null, 2)}\n`;
 }
 
-function codexConfig(guardrails) {
-  const projectRootEntries = Array.from(new Set([
-    '.',
-    ...codexProjectRootDenyPatterns(guardrails),
-  ]))
-    .map((pattern) => `"${pattern}" = "${pattern === '.' ? 'write' : 'none'}"`)
-    .join(', ');
-  const absoluteEntries = Array.from(new Set(codexAbsoluteDenyPatterns(guardrails)))
-    .map((pattern) => `"${pattern}" = "none"`)
-    .join('\n');
-
+function codexConfig() {
   return `${generatedHeader('toml')}model = "gpt-5.3-codex"
 model_reasoning_effort = "xhigh"
 service_tier = "fast"
 approval_policy = "on-request"
+sandbox_mode = "workspace-write"
 web_search = "cached"
 notify = ["terminal-notifier", "-message", "Codex turn complete", "-title", "Codex"]
-default_permissions = "global_lockdown"
+
+[sandbox_workspace_write]
+network_access = false
 
 [features]
 hooks = true
@@ -277,7 +270,6 @@ model_reasoning_effort = "high"
 service_tier = "fast"
 approval_policy = "on-request"
 web_search = "cached"
-permissions_profile = "global_lockdown"
 
 [profiles.deep]
 model = "gpt-5.4"
@@ -285,7 +277,6 @@ model_reasoning_effort = "high"
 service_tier = "fast"
 approval_policy = "never"
 web_search = "cached"
-permissions_profile = "global_lockdown"
 
 [profiles.quick]
 model = "gpt-5.4-mini"
@@ -293,7 +284,6 @@ model_reasoning_effort = "medium"
 service_tier = "fast"
 approval_policy = "on-request"
 web_search = "cached"
-permissions_profile = "global_lockdown"
 
 [profiles.verify]
 model = "gpt-5.4"
@@ -301,7 +291,6 @@ model_reasoning_effort = "high"
 service_tier = "fast"
 approval_policy = "on-request"
 web_search = "cached"
-permissions_profile = "global_lockdown"
 
 [tui]
 notifications = true
@@ -314,13 +303,6 @@ persistence = "save-all"
 max_threads = 6
 max_depth = 1
 job_max_runtime_seconds = 1800
-
-[permissions.global_lockdown.filesystem]
-":project_roots" = { ${projectRootEntries} }
-${absoluteEntries}
-
-[permissions.global_lockdown.network]
-enabled = false
 `;
 }
 

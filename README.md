@@ -85,6 +85,8 @@ Use this VS Code host setting:
 }
 ```
 
+`install-devcontainer.sh` delegates to `install.sh`, installs distro `bubblewrap` when root and `apt-get` are available, and links `~/.local/bin/codex` to `codex-safe` so devcontainer installs can keep working when the container runtime blocks Codex's inner Linux sandbox.
+
 For VS Code Copilot extension user-level customisation, configure the host-side VS Code settings to point at the installed locations you want loaded. The installer creates the files; VS Code decides which user/workspace locations to load.
 
 ## Validate
