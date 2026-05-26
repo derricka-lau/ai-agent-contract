@@ -356,10 +356,31 @@ function generateFiles() {
   files.set('claude/settings.json', claudeSettings(guardrails));
   files.set('claude/managed-settings.json', `${JSON.stringify({ permissions: { disableBypassPermissionsMode: 'disable' } }, null, 2)}\n`);
   files.set('codex/config.toml', codexConfig(guardrails));
-  files.set('codex/hooks.json', `${JSON.stringify([
-    { event: 'PreToolUse', matcher: 'Bash', command: '$HOME/.codex/hooks/pre-command-guard.sh' },
-    { event: 'Stop', command: '$HOME/.codex/hooks/stop-reminder.sh' },
-  ], null, 2)}\n`);
+  files.set('codex/hooks.json', `${JSON.stringify({
+    hooks: {
+      PreToolUse: [
+        {
+          matcher: 'Bash',
+          hooks: [
+            {
+              type: 'command',
+              command: '$HOME/.codex/hooks/pre-command-guard.sh',
+            },
+          ],
+        },
+      ],
+      Stop: [
+        {
+          hooks: [
+            {
+              type: 'command',
+              command: '$HOME/.codex/hooks/stop-reminder.sh',
+            },
+          ],
+        },
+      ],
+    },
+  }, null, 2)}\n`);
   files.set('codex/hooks/pre-command-guard.sh', hookWrapper('codex-pre-command'));
   files.set('codex/hooks/stop-reminder.sh', '#!/usr/bin/env bash\nset -euo pipefail\n\necho \'{"decision":"block","reason":"Run tests before considering this complete."}\'\n');
   files.set('copilot/hooks/policy.json', `${JSON.stringify({

@@ -44,6 +44,10 @@ function parseJson(basePath, relativePath) {
   }
 }
 
+function parseGeneratedJson(relativePath) {
+  return JSON.parse(readGenerated(relativePath));
+}
+
 function command(commandName, args, options = {}) {
   return childProcess.spawnSync(commandName, args, {
     cwd: root,
@@ -130,6 +134,22 @@ for (const file of [
   'copilot/hooks/policy.json',
 ]) {
   parseJson(generatedRoot, file);
+}
+
+const codexHooks = parseGeneratedJson('codex/hooks.json');
+const codexPreToolUse = codexHooks?.hooks?.PreToolUse?.[0]?.hooks?.[0];
+const codexStop = codexHooks?.hooks?.Stop?.[0]?.hooks?.[0];
+
+if (codexPreToolUse?.type === 'command' && codexPreToolUse.command === '$HOME/.codex/hooks/pre-command-guard.sh') {
+  ok('codex/hooks.json uses command handlers for PreToolUse');
+} else {
+  fail('codex/hooks.json missing PreToolUse command handler');
+}
+
+if (codexStop?.type === 'command' && codexStop.command === '$HOME/.codex/hooks/stop-reminder.sh') {
+  ok('codex/hooks.json uses command handlers for Stop');
+} else {
+  fail('codex/hooks.json missing Stop command handler');
 }
 
 for (const file of [
