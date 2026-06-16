@@ -14,7 +14,7 @@ Edit these files first:
 - `core/guardrails.json` - machine-enforced sensitive-file and dangerous-command policy.
 - `core/roles.json` - canonical architect, implementer, reviewer, and security-reviewer agents.
 - `core/area-instructions.json` - Copilot area-specific instruction files.
-- `core/memory.md`, `core/user-context.md`, `core/workflow.md` - shared memory and workflow prompts, including TDD execution flow.
+- `core/user-context.md`, `core/workflow.md` - shared user context and workflow prompts, including TDD execution flow.
 - `skills/*/SKILL.md` - canonical shared skills copied to all supported tools, including test strategy and validation rules.
 
 After changing `core/*`, run:

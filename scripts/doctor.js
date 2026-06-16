@@ -182,6 +182,12 @@ for (const file of [
 
 requireAbsent('copilot/AGENTS.md');
 requireAbsent('copilot/copilot-instructions.md');
+requireAbsent('claude/MEMORY.md');
+requireAbsent('codex/MEMORY.md');
+requireAbsent('copilot/MEMORY.md');
+requireAbsent('claude/memory/user_role.md');
+requireAbsent('codex/memory/user_role.md');
+requireAbsent('copilot/memory/user_role.md');
 
 for (const file of [
   'claude/CLAUDE.md',
@@ -197,6 +203,12 @@ for (const file of [
 
 requireGeneratedContent('claude/settings.json', claudeReadPattern);
 requireGeneratedContent('claude/settings.json', claudeEditPattern);
+
+if (parseGeneratedJson('claude/settings.json').autoMemoryEnabled === undefined) {
+  ok('claude/settings.json does not enable auto-memory');
+} else {
+  fail('claude/settings.json still sets autoMemoryEnabled');
+}
 requireGeneratedContent('codex/config.toml', 'approval_policy = "on-request"');
 requireGeneratedContent('codex/config.toml', 'sandbox_mode = "workspace-write"');
 requireGeneratedContent('codex/config.toml', '[sandbox_workspace_write]');

@@ -197,7 +197,6 @@ function claudeSettings(guardrails) {
     language: 'british english',
     alwaysThinkingEnabled: true,
     effortLevel: 'max',
-    autoMemoryEnabled: true,
     permissions: {
       allow: [
         'Bash(git diff *)',
@@ -324,12 +323,6 @@ function generateFiles() {
 
   files.set('claude/CLAUDE.md', contract);
   files.set('codex/AGENTS.md', contract);
-  files.set('claude/MEMORY.md', read('core/memory.md'));
-  files.set('codex/MEMORY.md', read('core/memory.md'));
-  files.set('copilot/MEMORY.md', read('core/memory.md'));
-  files.set('claude/memory/user_role.md', read('core/user-context.md'));
-  files.set('codex/memory/user_role.md', read('core/user-context.md'));
-  files.set('copilot/memory/user_role.md', read('core/user-context.md'));
   files.set('claude/prompts/workflow.md', read('core/workflow.md'));
   files.set('codex/prompts/workflow.md', read('core/workflow.md'));
   files.set('copilot/prompts/workflow.md', read('core/workflow.md'));
