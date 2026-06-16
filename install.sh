@@ -122,6 +122,29 @@ ensure_shell_exports() {
   fi
 }
 
+apply_vscode_settings() {
+  local fragment="$1"
+  local settings_dir
+
+  case "$(uname -s)" in
+    Darwin) settings_dir="$HOME/Library/Application Support/Code/User" ;;
+    Linux) settings_dir="$HOME/.config/Code/User" ;;
+    *) log "Skipping VS Code settings: unsupported OS $(uname -s)."; return 0 ;;
+  esac
+
+  if [ ! -d "$settings_dir" ]; then
+    log "Skipping VS Code settings: $settings_dir not found (desktop VS Code not installed)."
+    return 0
+  fi
+
+  local target="$settings_dir/settings.json"
+  if [ -f "$target" ]; then
+    cp "$target" "$target.dotfiles-backup.$(date +%Y%m%d-%H%M%S)"
+  fi
+
+  node "$SCRIPT_DIR/scripts/merge-vscode-settings.js" "$fragment" "$target"
+}
+
 verify_installed() {
   local pass=0
   local fail=0
@@ -233,6 +256,7 @@ main() {
   git config --global core.hooksPath "$HOME/.git-hooks"
 
   ensure_shell_exports
+  apply_vscode_settings "$generated_dir/vscode/settings.json"
   verify_installed
   write_manifest
 

@@ -89,15 +89,12 @@ Use this VS Code host setting:
 
 For VS Code Copilot extension user-level customisation, configure the host-side VS Code settings to point at the installed locations you want loaded. The installer creates the files; VS Code decides which user/workspace locations to load.
 
-The VS Code Copilot extension reads both `~/.copilot/instructions/*.instructions.md` and `~/.claude/CLAUDE.md` by default, so the shared contract loads twice. Keep the Copilot-native instructions path and disable Copilot's CLAUDE.md pickup in your VS Code user `settings.json`:
+The VS Code Copilot extension reads both `~/.copilot/instructions/*.instructions.md` and `~/.claude/CLAUDE.md` by default, so the shared contract loads twice. The installer disables Copilot's CLAUDE.md pickup by merging `chat.useClaudeMdFile: false` (sourced from `core/vscode-settings.json`) into your desktop VS Code user `settings.json`:
 
-```json
-{
-  "chat.useClaudeMdFile": false
-}
-```
+- macOS: `~/Library/Application Support/Code/User/settings.json`
+- Linux: `~/.config/Code/User/settings.json`
 
-This loads the contract once in Copilot (from `~/.copilot/instructions/`) while preserving the area-specific `applyTo` rules. The Claude Code CLI still reads `~/.claude/CLAUDE.md` directly; this setting only affects the VS Code Copilot extension.
+The merge is idempotent, backs up the existing file first, and preserves your other settings; it is skipped if VS Code is not installed or the file contains comments. This loads the contract once in Copilot (from `~/.copilot/instructions/`) while preserving the area-specific `applyTo` rules. The Claude Code CLI still reads `~/.claude/CLAUDE.md` directly; this setting only affects the VS Code Copilot extension. VS Code Insiders, VSCodium, and devcontainer/remote settings are not covered automatically — apply the setting there yourself if needed.
 
 ## Validate
 

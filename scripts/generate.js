@@ -333,6 +333,7 @@ function generateFiles() {
   files.set('claude/prompts/workflow.md', read('core/workflow.md'));
   files.set('codex/prompts/workflow.md', read('core/workflow.md'));
   files.set('copilot/prompts/workflow.md', read('core/workflow.md'));
+  files.set('vscode/settings.json', `${JSON.stringify(readJson('core/vscode-settings.json'), null, 2)}\n`);
   files.set('claude/settings.json', claudeSettings(guardrails));
   files.set('claude/managed-settings.json', `${JSON.stringify({ permissions: { disableBypassPermissionsMode: 'disable' } }, null, 2)}\n`);
   files.set('codex/config.toml', codexConfig(guardrails));

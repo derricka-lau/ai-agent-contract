@@ -140,8 +140,16 @@ for (const file of [
   'claude/managed-settings.json',
   'codex/hooks.json',
   'copilot/hooks/policy.json',
+  'vscode/settings.json',
 ]) {
   parseJson(generatedRoot, file);
+}
+
+if (existsIn(generatedRoot, 'vscode/settings.json') &&
+    parseGeneratedJson('vscode/settings.json')['chat.useClaudeMdFile'] === false) {
+  ok('vscode/settings.json disables Copilot CLAUDE.md pickup');
+} else {
+  fail('vscode/settings.json missing chat.useClaudeMdFile=false');
 }
 
 const codexHooks = parseGeneratedJson('codex/hooks.json');
