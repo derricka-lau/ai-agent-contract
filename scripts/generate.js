@@ -323,20 +323,9 @@ function generateFiles() {
           ],
         },
       ],
-      Stop: [
-        {
-          hooks: [
-            {
-              type: 'command',
-              command: '$HOME/.codex/hooks/stop-reminder.sh',
-            },
-          ],
-        },
-      ],
     },
   }, null, 2)}\n`);
   files.set('codex/hooks/pre-command-guard.sh', hookWrapper('codex-pre-command'));
-  files.set('codex/hooks/stop-reminder.sh', '#!/usr/bin/env bash\nset -euo pipefail\n\necho \'{"decision":"block","reason":"Run tests before considering this complete."}\'\n');
   files.set('copilot/hooks/policy.json', `${JSON.stringify({
     version: 1,
     hooks: {

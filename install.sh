@@ -229,6 +229,7 @@ main() {
   copy_tree "$generated_dir/claude" "$HOME/.claude"
   copy_tree "$generated_dir/codex" "$HOME/.codex"
   copy_tree "$generated_dir/copilot" "$HOME/.copilot"
+  rm -f "$HOME/.codex/hooks/stop-reminder.sh"
   copy_skills "$HOME/.claude/skills"
   copy_skills "$HOME/.codex/skills"
   copy_skills "$HOME/.copilot/skills"
@@ -241,7 +242,7 @@ main() {
   cp "$SCRIPT_DIR/codex-safe" "$HOME/.local/bin/codex-safe"
   cp "$SCRIPT_DIR/copilot-safe" "$HOME/.local/bin/copilot-safe"
   chmod +x "$HOME/.local/bin/codex-safe" "$HOME/.local/bin/copilot-safe"
-  chmod +x "$HOME/.codex/hooks/pre-command-guard.sh" "$HOME/.codex/hooks/stop-reminder.sh" "$HOME/.copilot/hooks/pre-tool-guard.sh"
+  chmod +x "$HOME/.codex/hooks/pre-command-guard.sh" "$HOME/.copilot/hooks/pre-tool-guard.sh"
 
   install_npm_cli "@anthropic-ai/claude-code" "Claude Code"
   install_npm_cli "@openai/codex" "Codex"

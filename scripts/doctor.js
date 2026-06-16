@@ -154,7 +154,6 @@ if (existsIn(generatedRoot, 'vscode/settings.json') &&
 
 const codexHooks = parseGeneratedJson('codex/hooks.json');
 const codexPreToolUse = codexHooks?.hooks?.PreToolUse?.[0]?.hooks?.[0];
-const codexStop = codexHooks?.hooks?.Stop?.[0]?.hooks?.[0];
 
 if (codexPreToolUse?.type === 'command' && codexPreToolUse.command === '$HOME/.codex/hooks/pre-command-guard.sh') {
   ok('codex/hooks.json uses command handlers for PreToolUse');
@@ -162,10 +161,10 @@ if (codexPreToolUse?.type === 'command' && codexPreToolUse.command === '$HOME/.c
   fail('codex/hooks.json missing PreToolUse command handler');
 }
 
-if (codexStop?.type === 'command' && codexStop.command === '$HOME/.codex/hooks/stop-reminder.sh') {
-  ok('codex/hooks.json uses command handlers for Stop');
+if (codexHooks?.hooks?.Stop === undefined) {
+  ok('codex/hooks.json does not install a Stop hook');
 } else {
-  fail('codex/hooks.json missing Stop command handler');
+  fail('codex/hooks.json still installs a Stop hook');
 }
 
 for (const file of [
@@ -188,6 +187,7 @@ requireAbsent('copilot/MEMORY.md');
 requireAbsent('claude/memory/user_role.md');
 requireAbsent('codex/memory/user_role.md');
 requireAbsent('copilot/memory/user_role.md');
+requireAbsent('codex/hooks/stop-reminder.sh');
 
 for (const file of [
   'claude/CLAUDE.md',
