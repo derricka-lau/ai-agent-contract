@@ -197,6 +197,7 @@ function claudeSettings(guardrails) {
     language: 'british english',
     alwaysThinkingEnabled: true,
     effortLevel: 'max',
+    attribution: { commit: '', pr: '' },
     permissions: {
       allow: [
         'Bash(git diff *)',
@@ -217,27 +218,6 @@ function claudeSettings(guardrails) {
             {
               type: 'command',
               command: 'terminal-notifier -message "$CLAUDE_NOTIFICATION" -title "Claude Code" 2>/dev/null || notify-send "Claude Code" "$CLAUDE_NOTIFICATION" 2>/dev/null || true',
-            },
-          ],
-        },
-      ],
-      PostToolUse: [
-        {
-          matcher: 'Bash',
-          hooks: [
-            {
-              type: 'command',
-              command: 'cmd="$CLAUDE_TOOL_INPUT"; case "$cmd" in *pytest*|*phpunit*|*"composer test"*|*"npm test"*|*"npm run test"*|*"yarn test"*|*jest*|*vitest*|*mocha*) touch /tmp/.claude-tests-ran ;; esac; exit 0',
-            },
-          ],
-        },
-      ],
-      Stop: [
-        {
-          hooks: [
-            {
-              type: 'command',
-              command: 'if [ -f /tmp/.claude-tests-ran ]; then rm -f /tmp/.claude-tests-ran; exit 0; else echo \'{"decision":"block","reason":"Run tests before considering this complete."}\'; fi',
             },
           ],
         },
