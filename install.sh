@@ -115,10 +115,10 @@ ensure_shell_exports() {
     log "Added ~/.local/bin to PATH in $shell_rc"
   fi
 
-  local copilot_dirs='export COPILOT_CUSTOM_INSTRUCTIONS_DIRS="$HOME/.copilot,$HOME/.copilot/instructions"'
-  if ! grep -q 'COPILOT_CUSTOM_INSTRUCTIONS_DIRS' "$shell_rc" 2>/dev/null; then
-    printf '%s\n' "$copilot_dirs" >> "$shell_rc"
-    log "Added COPILOT_CUSTOM_INSTRUCTIONS_DIRS to $shell_rc"
+  local prompt_cache='export ENABLE_PROMPT_CACHING_1H=1'
+  if ! grep -q 'ENABLE_PROMPT_CACHING_1H' "$shell_rc" 2>/dev/null; then
+    printf '%s\n' "$prompt_cache" >> "$shell_rc"
+    log "Added ENABLE_PROMPT_CACHING_1H to $shell_rc"
   fi
 }
 

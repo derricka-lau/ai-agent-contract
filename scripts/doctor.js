@@ -68,6 +68,14 @@ function requireGenerated(relativePath) {
   }
 }
 
+function requireAbsent(relativePath) {
+  if (existsIn(generatedRoot, relativePath)) {
+    fail(`${relativePath} should no longer be generated`);
+  } else {
+    ok(`${relativePath} is not generated`);
+  }
+}
+
 function requireGeneratedContent(relativePath, needle) {
   if (!readGenerated(relativePath).includes(needle)) {
     fail(`${relativePath} missing ${needle}`);
@@ -155,8 +163,6 @@ if (codexStop?.type === 'command' && codexStop.command === '$HOME/.codex/hooks/s
 for (const file of [
   'claude/CLAUDE.md',
   'codex/AGENTS.md',
-  'copilot/AGENTS.md',
-  'copilot/copilot-instructions.md',
   'copilot/instructions/global-contract.instructions.md',
   'claude/agents/architect.md',
   'codex/agents/explorer.toml',
@@ -166,15 +172,19 @@ for (const file of [
   requireGenerated(file);
 }
 
+requireAbsent('copilot/AGENTS.md');
+requireAbsent('copilot/copilot-instructions.md');
+
 for (const file of [
   'claude/CLAUDE.md',
   'codex/AGENTS.md',
-  'copilot/AGENTS.md',
+  'copilot/instructions/global-contract.instructions.md',
 ]) {
   requireGeneratedContent(file, 'Decision type:');
   requireGeneratedContent(file, 'Risk check:');
   requireGeneratedContent(file, blockedEnv);
   requireGeneratedContent(file, blockedSettingsLocal);
+  requireGeneratedContent(file, 'Do not add dependencies');
 }
 
 requireGeneratedContent('claude/settings.json', claudeReadPattern);

@@ -17,7 +17,6 @@
 - Avoid speculative refactors and unrelated edits.
 - Do not implement behaviour changes before you have a failing or demonstrably missing automated test, unless the user explicitly approves a no-test path.
 - Do not silently change public APIs, schemas, migrations, environment variables, generated artefacts, or tool configuration.
-- Do not add dependencies without explicit justification.
 
 ## Quality Order
 1. Correctness

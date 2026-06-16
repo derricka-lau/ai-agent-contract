@@ -324,8 +324,6 @@ function generateFiles() {
 
   files.set('claude/CLAUDE.md', contract);
   files.set('codex/AGENTS.md', contract);
-  files.set('copilot/AGENTS.md', contract);
-  files.set('copilot/copilot-instructions.md', contract);
   files.set('claude/MEMORY.md', read('core/memory.md'));
   files.set('codex/MEMORY.md', read('core/memory.md'));
   files.set('copilot/MEMORY.md', read('core/memory.md'));

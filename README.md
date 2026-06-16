@@ -36,7 +36,7 @@ Runtime files include:
 
 - `claude/CLAUDE.md`, `claude/settings.json`, `claude/agents/*.md`.
 - `codex/AGENTS.md`, `codex/config.toml`, `codex/hooks/*`, `codex/agents/*.toml`.
-- `copilot/AGENTS.md`, `copilot/copilot-instructions.md`, `copilot/instructions/*.instructions.md`, `copilot/hooks/*`, `copilot/agents/*.agent.md`.
+- `copilot/instructions/*.instructions.md`, `copilot/hooks/*`, `copilot/agents/*.agent.md`.
 
 Do not edit generated files by hand. Edit `core/*`, then re-run the installer or render to a disposable directory.
 
@@ -88,6 +88,16 @@ Use this VS Code host setting:
 `install-devcontainer.sh` delegates to `install.sh`, installs distro `bubblewrap` when root and `apt-get` are available, and links `~/.local/bin/codex` to `codex-safe` so devcontainer installs can keep working when the container runtime blocks Codex's inner Linux sandbox.
 
 For VS Code Copilot extension user-level customisation, configure the host-side VS Code settings to point at the installed locations you want loaded. The installer creates the files; VS Code decides which user/workspace locations to load.
+
+The VS Code Copilot extension reads both `~/.copilot/instructions/*.instructions.md` and `~/.claude/CLAUDE.md` by default, so the shared contract loads twice. Keep the Copilot-native instructions path and disable Copilot's CLAUDE.md pickup in your VS Code user `settings.json`:
+
+```json
+{
+  "chat.useClaudeMdFile": false
+}
+```
+
+This loads the contract once in Copilot (from `~/.copilot/instructions/`) while preserving the area-specific `applyTo` rules. The Claude Code CLI still reads `~/.claude/CLAUDE.md` directly; this setting only affects the VS Code Copilot extension.
 
 ## Validate
 
