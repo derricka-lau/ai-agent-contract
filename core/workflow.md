@@ -5,7 +5,7 @@
 1. Restate the task and constraints.
 2. Inspect only the relevant files, commands, and existing tests.
 3. Present a Decision Ledger entry for material choices.
-4. Identify the smallest relevant automated test. If coverage is missing, add or update a test that fails for the requested behaviour before editing implementation. If no automated test is feasible, say why before proceeding.
+4. Identify the smallest relevant automated test and present the test case or no-test rationale for human review before editing implementation. If coverage is missing, add or update a test that fails for the requested behaviour before editing implementation.
 5. Implement the selected option with minimal diffs until the focused test passes.
 6. Run targeted validation first, then broader checks if the scope warrants it.
 7. Report changed files, validations, risks, and unrun checks.

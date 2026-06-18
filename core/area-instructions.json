@@ -25,7 +25,7 @@
     "body": [
       "Prefer behavioural assertions over implementation details.",
       "Keep test data deterministic and readable.",
-      "Create or update the smallest failing test first for behaviour changes.",
+      "Identify the smallest failing test case for human review before implementing behaviour changes.",
       "Re-run the smallest relevant test immediately after each substantive edit.",
       "Do not weaken coverage by changing include/exclude scope."
     ]

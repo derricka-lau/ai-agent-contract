@@ -1,6 +1,8 @@
 # Decision Ledger Protocol
 
-The Decision Ledger is the core human-in-the-loop protocol. It exists to force explicit engineering trade-offs before material changes, not to ask for empty approval.
+The Decision Ledger is the core human-in-the-loop protocol. It exists because AI cannot replace human judgement: the assistant must surface explicit engineering trade-offs before material changes, not ask for empty approval.
+
+The `D1`/`D2`/`D3` modes form the review ladder. Use the ladder to decide how many material choices need human review before implementation.
 
 ## Core Rule
 
@@ -56,6 +58,7 @@ Ask about:
 - Whether a change is global, per-workflow, or file-by-file.
 - Whether to trim, delete, retain, or generate shared instructions, fixtures, helpers, hooks, agents, skills, or configs.
 - Whether generated artefacts should be committed, produced locally, or produced in CI.
+- Which first test case, fixture strategy, or no-test rationale should be reviewed before implementation.
 
 Do not ask about:
 - Whether to read nearby non-sensitive files.

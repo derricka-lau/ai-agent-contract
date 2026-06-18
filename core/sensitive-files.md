@@ -14,9 +14,9 @@ Safe examples such as `.env.example`, `.env.sample`, and `.env.template` may be 
 
 ## Enforcement Expectations
 
-- Claude Code must deny protected paths through `permissions.deny` in settings or managed settings.
-- Codex must deny protected paths through the active filesystem permission profile.
 - GitHub Copilot must deny protected paths through a hook or equivalent deterministic tool gate when available.
+- Compatible Codex profiles must deny protected paths through the active filesystem permission profile.
+- Compatible Claude Code settings must deny protected paths through `permissions.deny` in settings or managed settings.
 - All tools must also include instruction-level refusal language, because deterministic gates are defence-in-depth rather than a replacement for policy.
 
 ## Refusal Behaviour

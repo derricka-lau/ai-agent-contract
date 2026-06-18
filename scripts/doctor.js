@@ -147,24 +147,24 @@ for (const file of [
 
 if (existsIn(generatedRoot, 'vscode/settings.json') &&
     parseGeneratedJson('vscode/settings.json')['chat.useClaudeMdFile'] === false) {
-  ok('vscode/settings.json disables Copilot CLAUDE.md pickup');
+  ok('vscode/settings.json keeps Copilot on generated instructions');
 } else {
-  fail('vscode/settings.json missing chat.useClaudeMdFile=false');
+  fail('vscode/settings.json missing chat.useClaudeMdFile=false for Copilot instruction isolation');
 }
 
 const codexHooks = parseGeneratedJson('codex/hooks.json');
 const codexPreToolUse = codexHooks?.hooks?.PreToolUse?.[0]?.hooks?.[0];
 
 if (codexPreToolUse?.type === 'command' && codexPreToolUse.command === '$HOME/.codex/hooks/pre-command-guard.sh') {
-  ok('codex/hooks.json uses command handlers for PreToolUse');
+  ok('compatible Codex hooks use command handlers for PreToolUse');
 } else {
-  fail('codex/hooks.json missing PreToolUse command handler');
+  fail('compatible Codex hooks missing PreToolUse command handler');
 }
 
 if (codexHooks?.hooks?.Stop === undefined) {
-  ok('codex/hooks.json does not install a Stop hook');
+  ok('compatible Codex hooks do not install a Stop hook');
 } else {
-  fail('codex/hooks.json still installs a Stop hook');
+  fail('compatible Codex hooks still install a Stop hook');
 }
 
 for (const file of [
@@ -205,9 +205,9 @@ requireGeneratedContent('claude/settings.json', claudeReadPattern);
 requireGeneratedContent('claude/settings.json', claudeEditPattern);
 
 if (parseGeneratedJson('claude/settings.json').autoMemoryEnabled === undefined) {
-  ok('claude/settings.json does not enable auto-memory');
+  ok('compatible Claude settings do not enable auto-memory');
 } else {
-  fail('claude/settings.json still sets autoMemoryEnabled');
+  fail('compatible Claude settings still set autoMemoryEnabled');
 }
 requireGeneratedContent('codex/config.toml', 'approval_policy = "on-request"');
 requireGeneratedContent('codex/config.toml', 'sandbox_mode = "workspace-write"');
@@ -241,9 +241,9 @@ if (denyCommand.stdout.includes('"permissionDecision":"deny"')) {
 
 const codexDeny = guard({ tool_input: { command: codexReadCommand } }, 'codex-pre-command');
 if (codexDeny.status === 2) {
-  ok('Codex guard denies reading a blocked local config');
+  ok('compatible Codex guard denies reading a blocked local config');
 } else {
-  fail('Codex guard did not deny reading a blocked local config');
+  fail('compatible Codex guard did not deny reading a blocked local config');
 }
 
 if (failures > 0) {

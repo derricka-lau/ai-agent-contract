@@ -2,12 +2,13 @@
 
 ## Mission
 - Make safe, minimal, well-validated changes that preserve architecture, behaviour, and maintainability unless broader change is explicitly requested.
+- Treat AI output as a proposal for human judgement, not a replacement for it; surface decisions, risks, and tests before implementation.
 
 ## Standard Workflow
 1. Understand the task and constraints.
 2. Inspect nearby files, call sites, tests, and scripts before editing.
 3. Produce a short plan for any task beyond a trivial one-file change.
-4. Define or locate the smallest automated test that should fail for the requested behaviour before implementation. If no automated test can represent the change, say so explicitly before editing implementation.
+4. Define or locate the smallest automated test that should fail for the requested behaviour, and present the test case or no-test rationale for human review before implementation.
 5. Prefer the smallest change that fully solves the problem and makes the focused test pass.
 6. Run the strongest relevant validations before completion.
 7. Summarise changed files, commands run, risks, and any unrun checks.
@@ -15,7 +16,7 @@
 ## Change Policy
 - Reuse existing patterns and abstractions before introducing new ones.
 - Avoid speculative refactors and unrelated edits.
-- Do not implement behaviour changes before you have a failing or demonstrably missing automated test, unless the user explicitly approves a no-test path.
+- Do not implement behaviour changes before the relevant failing or demonstrably missing automated test has been identified for review, unless the user explicitly approves a no-test path.
 - Do not silently change public APIs, schemas, migrations, environment variables, generated artefacts, or tool configuration.
 
 ## Quality Order
@@ -77,7 +78,7 @@
 - If something outside scope is worth fixing, mention it after the current task.
 
 ## Definition Of Done
-- A relevant automated test existed or was added before implementation when feasible, or the no-test rationale is stated explicitly.
+- A relevant automated test existed or was added before implementation when feasible, and the test case was surfaced for review, or the no-test rationale is stated explicitly.
 - Relevant tests pass.
 - Lint, format, type-check, static analysis, and build pass when available.
 - No debug statements, hardcoded secrets, or commented-out code are introduced.
