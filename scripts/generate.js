@@ -307,7 +307,7 @@ function hookWrapper(kind) {
   return `#!/usr/bin/env bash
 set -euo pipefail
 
-node "$HOME/.local/share/dotfiles/guard.js" ${kind}
+node "$HOME/.local/share/ai-agent-contract/guard.js" ${kind}
 `;
 }
 

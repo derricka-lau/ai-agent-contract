@@ -25,7 +25,9 @@ install_npm_cli() {
 }
 
 backup_existing() {
-  local backup_dir="$HOME/.dotfiles-backup/$(date +%Y%m%d-%H%M%S)"
+
+
+  local backup_dir="$HOME/.ai-agent-contract-backup/$(date +%Y%m%d-%H%M%S)"
   local backed_up=false
   local targets=(
     "$HOME/.claude"
@@ -34,11 +36,11 @@ backup_existing() {
     "$HOME/.agents/skills"
     "$HOME/.local/bin/codex-safe"
     "$HOME/.local/bin/copilot-safe"
-    "$HOME/.local/share/dotfiles"
+    "$HOME/.local/share/ai-agent-contract"
     "$HOME/.git-hooks"
     "$HOME/.gitconfig"
     "$HOME/.gitconfig-github"
-    "$HOME/.dotfiles-manifest"
+    "$HOME/.ai-agent-contract-manifest"
   )
 
   for target in "${targets[@]}"; do
@@ -77,7 +79,7 @@ copy_skills() {
 }
 
 write_manifest() {
-  local manifest="$HOME/.dotfiles-manifest"
+  local manifest="$HOME/.ai-agent-contract-manifest"
 
   : > "$manifest"
   for target in \
@@ -87,7 +89,7 @@ write_manifest() {
     "$HOME/.agents/skills" \
     "$HOME/.local/bin/codex-safe" \
     "$HOME/.local/bin/copilot-safe" \
-    "$HOME/.local/share/dotfiles" \
+    "$HOME/.local/share/ai-agent-contract" \
     "$HOME/.git-hooks" \
     "$HOME/.gitconfig" \
     "$HOME/.gitconfig-github"; do
@@ -139,7 +141,7 @@ apply_vscode_settings() {
 
   local target="$settings_dir/settings.json"
   if [ -f "$target" ]; then
-    cp "$target" "$target.dotfiles-backup.$(date +%Y%m%d-%H%M%S)"
+    cp "$target" "$target.ai-agent-contract-backup.$(date +%Y%m%d-%H%M%S)"
   fi
 
   node "$SCRIPT_DIR/scripts/merge-vscode-settings.js" "$fragment" "$target"
@@ -173,7 +175,7 @@ verify_installed() {
   check "Compatible Codex config installed" test -f "$HOME/.codex/config.toml"
   check "Compatible Codex workspace-write installed" grep -Fq 'sandbox_mode = "workspace-write"' "$HOME/.codex/config.toml"
   check "Compatible Codex network remains disabled" grep -Fq 'network_access = false' "$HOME/.codex/config.toml"
-  check "Shared guard installed" test -f "$HOME/.local/share/dotfiles/guard.js"
+  check "Shared guard installed" test -f "$HOME/.local/share/ai-agent-contract/guard.js"
   check "Role agents installed" test -f "$HOME/.copilot/agents/security-reviewer.agent.md"
   check "Skills installed" test -f "$HOME/.copilot/skills/php-cakephp/SKILL.md"
   check "Git hooks installed" test -x "$HOME/.git-hooks/pre-commit"
@@ -215,7 +217,7 @@ main() {
   node "$SCRIPT_DIR/scripts/generate.js" --out "$generated_dir"
 
   log ""
-  log "=== Installing dotfiles ==="
+  log "=== Installing ai-agent-contract ==="
   log "NOTE: Managed targets are backed up, then overwritten from generated outputs."
 
   backup_existing
@@ -224,7 +226,7 @@ main() {
     "$HOME/.claude" "$HOME/.claude/memory" "$HOME/.claude/prompts" "$HOME/.claude/agents" "$HOME/.claude/skills" \
     "$HOME/.codex" "$HOME/.codex/memory" "$HOME/.codex/prompts" "$HOME/.codex/agents" "$HOME/.codex/hooks" "$HOME/.codex/skills" \
     "$HOME/.copilot" "$HOME/.copilot/memory" "$HOME/.copilot/prompts" "$HOME/.copilot/agents" "$HOME/.copilot/hooks" "$HOME/.copilot/instructions" "$HOME/.copilot/skills" \
-    "$HOME/.agents/skills" "$HOME/.local/bin" "$HOME/.local/share/dotfiles"
+    "$HOME/.agents/skills" "$HOME/.local/bin" "$HOME/.local/share/ai-agent-contract"
 
   copy_tree "$generated_dir/claude" "$HOME/.claude"
   copy_tree "$generated_dir/codex" "$HOME/.codex"
@@ -235,9 +237,9 @@ main() {
   copy_skills "$HOME/.copilot/skills"
   copy_skills "$HOME/.agents/skills"
 
-  cp "$SCRIPT_DIR/scripts/guard.js" "$HOME/.local/share/dotfiles/guard.js"
-  cp "$SCRIPT_DIR/core/guardrails.json" "$HOME/.local/share/dotfiles/guardrails.json"
-  chmod +x "$HOME/.local/share/dotfiles/guard.js"
+  cp "$SCRIPT_DIR/scripts/guard.js" "$HOME/.local/share/ai-agent-contract/guard.js"
+  cp "$SCRIPT_DIR/core/guardrails.json" "$HOME/.local/share/ai-agent-contract/guardrails.json"
+  chmod +x "$HOME/.local/share/ai-agent-contract/guard.js"
 
   cp "$SCRIPT_DIR/codex-safe" "$HOME/.local/bin/codex-safe"
   cp "$SCRIPT_DIR/copilot-safe" "$HOME/.local/bin/copilot-safe"
@@ -262,7 +264,7 @@ main() {
   write_manifest
 
   log ""
-  log "=== Done. Dotfiles are generated, installed, and verified. ==="
+  log "=== Done. ai-agent-contract is generated, installed, and verified. ==="
 }
 
 main "$@"

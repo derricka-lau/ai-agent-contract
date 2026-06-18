@@ -6,7 +6,7 @@ const os = require('os');
 const path = require('path');
 
 const root = path.resolve(__dirname, '..');
-const generatedRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'dotfiles-generated-'));
+const generatedRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ai-agent-contract-generated-'));
 const guardrails = JSON.parse(fs.readFileSync(path.join(root, 'core/guardrails.json'), 'utf8'));
 let failures = 0;
 
@@ -93,7 +93,7 @@ function guard(payload, mode = 'copilot-pre-tool') {
     input: JSON.stringify(payload),
     env: {
       ...process.env,
-      DOTFILES_GUARDRAILS: path.join(root, 'core/guardrails.json'),
+      AI_AGENT_CONTRACT_GUARDRAILS: path.join(root, 'core/guardrails.json'),
     },
   });
 }

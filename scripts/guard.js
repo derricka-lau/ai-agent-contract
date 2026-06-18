@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 
 const mode = process.argv[2] || '';
-const guardrailsPath = process.env.DOTFILES_GUARDRAILS
+const guardrailsPath = process.env.AI_AGENT_CONTRACT_GUARDRAILS
   || path.join(__dirname, 'guardrails.json');
 const guardrails = JSON.parse(fs.readFileSync(guardrailsPath, 'utf8'));
 

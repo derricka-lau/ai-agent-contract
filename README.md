@@ -1,4 +1,4 @@
-# Dotfiles
+# ai-agent-contract
 
 Source-driven setup for popular AI coding tools, including GitHub Copilot, OpenAI Codex, Claude Code, Google Antigravity, and more, with deterministic guardrails for human judgement, Decision Ledger review, and Test-Driven Development (TDD).
 
@@ -38,7 +38,7 @@ node scripts/doctor.js
 Generated files are not committed. To inspect them locally, render them into a disposable directory:
 
 ```bash
-node scripts/generate.js --out /tmp/dotfiles-runtime
+node scripts/generate.js --out /tmp/ai-agent-contract-runtime
 ```
 
 Runtime files include the Copilot-first surface and compatible secondary surfaces:
@@ -58,29 +58,29 @@ The most important guardrails are:
 - Deterministic denial of `.env*`, local app config, key/cert, and credential files.
 - Copilot instructions, hooks, and area-specific guidance generated from the same source contract.
 - Additional runtime-specific deny rules and filesystem guardrails generated from the same source contract.
-- Shared `scripts/guard.js` installed to `~/.local/share/dotfiles/guard.js` and used by Copilot hooks and compatible secondary hooks.
+- Shared `scripts/guard.js` installed to `~/.local/share/ai-agent-contract/guard.js` and used by Copilot hooks and compatible secondary hooks.
 - Safe CLI wrappers for Copilot and compatible secondary runtimes.
 
 ## Install
 
 ```bash
-git clone git@github.com:derricka-lau/dotfiles.git ~/dotfiles
-cd ~/dotfiles
+git clone git@github.com:derricka-lau/ai-agent-contract.git ~/ai-agent-contract
+cd ~/ai-agent-contract
 ./install.sh
 ```
 
 The installer:
 
 1. Verifies canonical sources and guardrails, including Decision Ledger and TDD policy sources.
-2. Backs up managed targets to `~/.dotfiles-backup/<timestamp>/`.
+2. Backs up managed targets to `~/.ai-agent-contract-backup/<timestamp>/`.
 3. Generates runtime files into a temporary directory.
 4. Copies generated Copilot runtime files into `~/.copilot`, plus compatible secondary runtime files when available.
 5. Copies shared skills to each supported runtime.
-6. Installs the shared guard runtime to `~/.local/share/dotfiles`.
+6. Installs the shared guard runtime to `~/.local/share/ai-agent-contract`.
 7. Installs CLI wrappers to `~/.local/bin`.
 8. Installs or updates the Copilot CLI and compatible secondary CLIs.
 9. Installs git config and global git hooks.
-10. Writes `~/.dotfiles-manifest`.
+10. Writes `~/.ai-agent-contract-manifest`.
 
 ## Devcontainers
 
@@ -88,9 +88,9 @@ Use this VS Code host setting:
 
 ```json
 {
-  "dotfiles.repository": "derricka-lau/dotfiles",
+  "dotfiles.repository": "derricka-lau/ai-agent-contract",
   "dotfiles.installCommand": "install-devcontainer.sh",
-  "dotfiles.targetPath": "~/dotfiles"
+  "dotfiles.targetPath": "~/ai-agent-contract"
 }
 ```
 
@@ -131,9 +131,9 @@ All three render from one source, `core/coach.md`, into one composed `SKILL.md` 
 
 ```bash
 node scripts/generate.js --check
-rm -rf /tmp/dotfiles-runtime
-node scripts/generate.js --out /tmp/dotfiles-runtime
-node scripts/generate.js --out /tmp/dotfiles-runtime --check
+rm -rf /tmp/ai-agent-contract-runtime
+node scripts/generate.js --out /tmp/ai-agent-contract-runtime
+node scripts/generate.js --out /tmp/ai-agent-contract-runtime --check
 node scripts/doctor.js
 bash -n install.sh install-devcontainer.sh uninstall.sh
 ```
