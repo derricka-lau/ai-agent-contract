@@ -105,6 +105,28 @@ The VS Code Copilot extension can read both Copilot instruction files and other 
 
 The merge is idempotent, backs up the existing file first, and preserves your other settings; it is skipped if VS Code is not installed or the file contains comments. This loads the contract once in Copilot (from `~/.copilot/instructions/`) while preserving the area-specific `applyTo` rules. Other local agent CLIs can still read their own generated instruction files if you use them; this setting only affects the VS Code Copilot extension. VS Code Insiders, VSCodium, and devcontainer/remote settings are not covered automatically — apply the setting there yourself if needed.
 
+## Coach Modes
+
+Three opt-in coaching modes let the AI do everything except write the
+decision-bearing implementation, so you keep your engineering judgement sharp.
+They inherit the full contract; the Decision Ledger still settles architecture
+and dependencies first. The modes differ only in how much the AI writes into the
+files; in all three it researches, summarises the agreed decisions, specifies the
+failing test, hands the logic to you with a `TODO(human)` marker, and reviews what
+you write.
+
+- `guide`: guidance only, no file writing. The AI gives the spec, checklist, and
+  steps in chat; you write the test, the scaffolding, and the logic. Maximum
+  practice for keeping an already-known skill warm.
+- `scaffolding`: the AI writes the failing test and the scaffolding (signature,
+  imports, structure) into the files; you write the logic. Skips boilerplate
+  typing.
+- `tutor` (token-heavy): as scaffolding, plus a line-by-line explanation while you
+  write the logic, for learning a new area from scratch.
+
+All three render from one source, `core/coach.md`, into one composed `SKILL.md` per mode, installed to each tool's skills directory.Re-invoke if the mode drifts in a long session.
+
+
 ## Validate
 
 ```bash

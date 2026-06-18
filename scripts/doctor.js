@@ -179,6 +179,29 @@ for (const file of [
   requireGenerated(file);
 }
 
+const coachFiles = [
+  'claude/skills/guide-mode/SKILL.md',
+  'claude/skills/scaffolding-mode/SKILL.md',
+  'claude/skills/tutor-mode/SKILL.md',
+  'codex/skills/guide-mode/SKILL.md',
+  'codex/skills/scaffolding-mode/SKILL.md',
+  'codex/skills/tutor-mode/SKILL.md',
+  'copilot/skills/guide-mode/SKILL.md',
+  'copilot/skills/scaffolding-mode/SKILL.md',
+  'copilot/skills/tutor-mode/SKILL.md',
+];
+
+for (const file of coachFiles) {
+  requireGenerated(file);
+  requireGeneratedContent(file, 'never write the decision-bearing implementation');
+  requireGeneratedContent(file, 'TODO(human)');
+}
+
+requireGeneratedContent('claude/skills/guide-mode/SKILL.md', 'Write nothing into files');
+requireGeneratedContent('claude/skills/scaffolding-mode/SKILL.md', 'scaffolding into the files');
+requireGeneratedContent('claude/skills/tutor-mode/SKILL.md', 'line by line');
+forbidGeneratedContent('claude/settings.json', 'outputStyle');
+
 requireAbsent('copilot/AGENTS.md');
 requireAbsent('copilot/copilot-instructions.md');
 requireAbsent('claude/MEMORY.md');

@@ -158,6 +158,24 @@ function copilotInstruction(id, instruction) {
   ].join('\n');
 }
 
+function coachSection(raw, name) {
+  const begin = `<!-- BEGIN ${name} -->`;
+  const end = `<!-- END ${name} -->`;
+  const start = raw.indexOf(begin);
+  const stop = raw.indexOf(end);
+  if (start === -1 || stop === -1 || stop < start) {
+    throw new Error(`core/coach.md is missing the ${name} section`);
+  }
+
+  return raw.slice(start + begin.length, stop).trim();
+}
+
+function coachSkill(name, description, body) {
+  const front = ['---', `name: ${name}`, `description: ${description}`, '---'].join('\n');
+
+  return `${front}\n\n${generatedHeader('md')}\n${body.trim()}\n`;
+}
+
 function denyPatterns(guardrails) {
   const readEdit = [];
   for (const baseName of guardrails.protectedBaseNames) {
@@ -356,6 +374,34 @@ function generateFiles() {
     files.set(`claude/agents/${role.id}.md`, claudeAgent(role));
     files.set(`codex/agents/${role.codexName}.toml`, codexAgent(role));
     files.set(`copilot/agents/${role.id}.agent.md`, copilotAgent(role));
+  }
+
+  const coach = read('core/coach.md');
+  const shared = coachSection(coach, 'SHARED');
+  const coachModes = [
+    {
+      slug: 'guide-mode',
+      section: 'GUIDE',
+      description: 'Coach me with guidance only; I write every line myself',
+    },
+    {
+      slug: 'scaffolding-mode',
+      section: 'SCAFFOLDING',
+      description: 'Write the test and scaffolding for me; I write the logic',
+    },
+    {
+      slug: 'tutor-mode',
+      section: 'TUTOR',
+      description: 'Teach me line by line while I write the code myself',
+    },
+  ];
+
+  for (const mode of coachModes) {
+    const body = markdownJoin([shared, coachSection(coach, mode.section)]);
+    const skill = coachSkill(mode.slug, mode.description, body);
+    files.set(`claude/skills/${mode.slug}/SKILL.md`, skill);
+    files.set(`codex/skills/${mode.slug}/SKILL.md`, skill);
+    files.set(`copilot/skills/${mode.slug}/SKILL.md`, skill);
   }
 
   return files;
