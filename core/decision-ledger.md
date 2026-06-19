@@ -29,7 +29,7 @@ Decision: [one concrete choice]
 Decision type: [architecture | config | security | data | testing | performance | UX | workflow | rollback]
 Context: [1-3 sentences with repo evidence and official/source evidence where relevant]
 Affected surface: [files, commands, configs, APIs, schemas, generated artefacts, user behaviour]
-Options:
+Options: (for scope-shaped decisions, anchor these to the archetypes in `Scope Anchors` below)
 1. [Option A] - benefit, cost, and risk.
 2. [Option B] - benefit, cost, and risk.
 3. [Option C] - benefit, cost, and risk.
@@ -47,6 +47,18 @@ Validation: [exact checks that prove the selected option works]
 Impact: [what changes, what stays unchanged, and who/what is affected]
 
 Wait for the user's choice before continuing.
+
+## Scope Anchors
+
+These apply **only when the decision is about how much to change** (change-surface, effort, refactor breadth). When a decision is shaped this way, present the options as these three archetypes so the human can choose the surface fast and consistently:
+
+1. **Minimal** - the smallest diff that fully solves the stated problem; touch nothing else.
+2. **Best practice (bounded)** - solve it properly to current best practice, accepting a wider refactor surface **within the task boundary**. This is not an open-ended refactor: it stays bound by `One task, one focus` in the global contract.
+3. **Targeted middle** - minimal plus the **named** adjacent fixes that directly de-risk this change; nothing speculative.
+
+Rules:
+- Do not force these archetypes onto decisions that are not about change-surface (for example fixture choice, commit-versus-CI for generated artefacts, or rollback strategy). Those keep free-form options.
+- The archetype is only the axis label. Each option still states the concrete benefit, cost, and risk for the specific decision.
 
 ## Granularity
 
