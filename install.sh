@@ -250,8 +250,15 @@ main() {
   install_npm_cli "@openai/codex" "Codex"
   install_npm_cli "@github/copilot" "Copilot" " Run 'copilot' then '/login' to authenticate."
 
-  cp "$SCRIPT_DIR/gitconfig" "$HOME/.gitconfig"
-  cp "$SCRIPT_DIR/gitconfig-github" "$HOME/.gitconfig-github"
+  if [ -f "$SCRIPT_DIR/gitconfig" ]; then
+    cp "$SCRIPT_DIR/gitconfig" "$HOME/.gitconfig"
+    log "Git identity config installed."
+  else
+    log "Skipping git identity config: gitconfig not present (create one to customise git identity)."
+  fi
+  if [ -f "$SCRIPT_DIR/gitconfig-github" ]; then
+    cp "$SCRIPT_DIR/gitconfig-github" "$HOME/.gitconfig-github"
+  fi
   mkdir -p "$HOME/.git-hooks"
   cp "$SCRIPT_DIR/hooks/pre-commit" "$HOME/.git-hooks/pre-commit"
   cp "$SCRIPT_DIR/hooks/pre-push" "$HOME/.git-hooks/pre-push"
