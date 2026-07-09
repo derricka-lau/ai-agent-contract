@@ -1,9 +1,0 @@
-[user]
-	name = For Ka Lau
-	email = lauf@cardiff.ac.uk
-
-[includeIf "hasconfig:remote.*.url:https://github.com/**"]
-	path = ~/.gitconfig-github
-
-[includeIf "hasconfig:remote.*.url:git@github.com:*/**"]
-	path = ~/.gitconfig-github
