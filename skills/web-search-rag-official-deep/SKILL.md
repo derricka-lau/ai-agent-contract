@@ -1,6 +1,6 @@
 ---
 name: web-search-rag-official-deep
-description: Perform exhaustive, multi-pass web searches before every single response — no exceptions — with a strong mandate to find and cite official primary sources (official documentation, GitHub repos, government sites, peer-reviewed papers, company press releases, RFC specs, WHO/CDC/FDA data, SEC filings, etc.) over secondary reporting. Uses 4–10+ searches, aggressive web_fetch of primary source pages, and citation-chain tracing to get to the original authority. Use this skill on ALL user messages — greetings, questions, follow-ups, code requests, casual chat, everything. If a user message exists, this skill triggers. This is the user's explicit preference and overrides any default behavior where the assistant might skip searching.
+description: Perform exhaustive web research prioritising official primary sources. Use only when the user explicitly invokes web-search-rag-official-deep or explicitly requests deep, primary-source-led research.
 ---
 
 # Web Search RAG — Official Sources Deep Mode

@@ -19,6 +19,17 @@
 - Do not implement behaviour changes before the relevant failing or demonstrably missing automated test has been identified for review, unless the user explicitly approves a no-test path.
 - Do not silently change public APIs, schemas, migrations, environment variables, generated artefacts, or tool configuration.
 
+## Simplicity And Cost
+- Choose the simplest design that fully satisfies correctness, security, compatibility, and testability; avoid cleverness and unnecessary layers.
+- Consider total engineering and operating cost, including implementation, review, maintenance, migration, CI, runtime, model or API usage, network, and storage costs.
+- Surface material recurring or irreversible costs before implementation. Do not trade maintainability or correctness for a minor short-term saving.
+- Remove superseded code paths, dependencies, configuration, and documentation in the same bounded change once their replacement is validated.
+
+## Root-Cause Changes
+- Fix the verified root cause with a direct, maintainable implementation.
+- Do not ship coding workarounds, hacks, silent fallbacks, compatibility shims, duplicated special cases, or blanket suppressions as substitutes for a correct design.
+- If a correct implementation is blocked and only a workaround appears possible, stop and surface the blocker; do not ship the workaround as production code.
+
 ## Quality Order
 1. Correctness
 2. Security
@@ -46,9 +57,15 @@
 ## Architecture
 - Apply SOLID and Clean Architecture where they fit the codebase.
 - Respect dependency direction: inner layers must not depend on outer layers.
-- Keep one source of truth. Do not duplicate logic across layers.
+- Keep one authoritative source for each rule, value, schema, or behaviour. Generate or reference derived forms; do not duplicate logic or policy across layers.
 - Verify framework APIs against official docs or local source before using them.
 - Do not assume APIs from a different framework version.
+
+## Source And Precedence
+- Canonical sources, generated artefacts, and installed runtime files must have an explicit ownership chain. Generated and installed files are outputs, never competing sources of truth.
+- When instructions conflict, follow platform and security constraints first, then the most specific applicable source. The latest applicable, explicitly approved decision supersedes older task-local guidance.
+- Update or remove superseded sources in the same change so only one current rule remains. Do not silently merge contradictory versions.
+- Update documentation after the implementation stabilises and before final validation, so the final documentation describes the resulting behaviour rather than an intended transition.
 
 ## Dependencies
 - Do not add dependencies without explicit approval.

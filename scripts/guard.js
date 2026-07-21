@@ -1,12 +1,30 @@
 #!/usr/bin/env node
 
-const fs = require('fs');
-const path = require('path');
+const fs = require('node:fs');
+const path = require('node:path');
 
 const mode = process.argv[2] || '';
 const guardrailsPath = process.env.AI_AGENT_CONTRACT_GUARDRAILS
   || path.join(__dirname, 'guardrails.json');
-const guardrails = JSON.parse(fs.readFileSync(guardrailsPath, 'utf8'));
+
+function loadGuardrails() {
+  const value = JSON.parse(fs.readFileSync(guardrailsPath, 'utf8'));
+  for (const key of [
+    'protectedBaseNames',
+    'protectedExtensions',
+    'protectedPathFragments',
+    'safeExampleBaseNames',
+    'dangerousCommandPatterns',
+  ]) {
+    if (!Array.isArray(value[key]) || !value[key].every((item) => typeof item === 'string')) {
+      throw new Error(`guardrails field ${key} must be an array of strings`);
+    }
+  }
+  for (const pattern of value.dangerousCommandPatterns) {
+    new RegExp(pattern, 'i');
+  }
+  return value;
+}
 
 function collectStrings(value, output = []) {
   if (typeof value === 'string') {
@@ -20,7 +38,6 @@ function collectStrings(value, output = []) {
       collectStrings(item, output);
     }
   }
-
   return output;
 }
 
@@ -29,54 +46,55 @@ function readStdin() {
 }
 
 function parsePayload(input) {
-  try {
-    return JSON.parse(input || '{}');
-  } catch {
-    return {};
+  const payload = JSON.parse(input || '{}');
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+    throw new Error('hook payload must be a JSON object');
   }
+  return payload;
+}
+
+function toolArguments(payload) {
+  return payload.tool_input
+    || payload.toolInput
+    || payload.tool_args
+    || payload.toolArgs
+    || {};
 }
 
 function commandFromPayload(payload) {
-  const toolInput = payload.tool_input || payload.toolInput || {};
-  const rawToolArgs = payload.toolArgs || '';
-
-  if (typeof toolInput.command === 'string') {
-    return toolInput.command;
+  const args = toolArguments(payload);
+  if (args && typeof args === 'object' && !Array.isArray(args)) {
+    if (typeof args.command === 'string') {
+      return args.command;
+    }
+    if (Array.isArray(args.commands)) {
+      return args.commands.join(' && ');
+    }
+    if (typeof args.commands === 'string') {
+      return args.commands;
+    }
+    return '';
   }
-
-  if (Array.isArray(toolInput.commands)) {
-    return toolInput.commands.join(' && ');
-  }
-
-  if (typeof toolInput.commands === 'string') {
-    return toolInput.commands;
-  }
-
-  if (typeof rawToolArgs === 'string' && rawToolArgs.length > 0) {
+  if (typeof args === 'string' && args.length > 0) {
     try {
-      const parsedArgs = JSON.parse(rawToolArgs);
-      return commandFromPayload({ tool_input: parsedArgs });
+      return commandFromPayload({ toolArgs: JSON.parse(args) });
     } catch {
-      return rawToolArgs;
+      return args;
     }
   }
-
   return '';
 }
 
 function haystackFromPayload(payload) {
   const toolName = payload.tool_name || payload.toolName || '';
-  const toolInput = payload.tool_input || payload.toolInput || {};
-  const rawToolArgs = payload.toolArgs || '';
-
-  return `${toolName} ${commandFromPayload(payload)} ${collectStrings(toolInput).join(' ')} ${rawToolArgs}`;
+  return `${toolName} ${collectStrings(toolArguments(payload)).join(' ')}`;
 }
 
 function normaliseToken(token) {
   return token.replace(/\\/g, '/');
 }
 
-function isSensitiveToken(token) {
+function isSensitiveToken(token, guardrails) {
   const normalised = normaliseToken(token);
   const parts = normalised.split('/').filter(Boolean);
   const baseName = parts[parts.length - 1] || normalised;
@@ -96,12 +114,9 @@ function pathTokens(input) {
     .filter(Boolean);
 }
 
-function evaluate(input) {
-  const dangerousCommandPatterns = guardrails.dangerousCommandPatterns
-    .map((pattern) => new RegExp(pattern, 'i'));
-  const hasDangerousCommand = dangerousCommandPatterns.some((pattern) => pattern.test(input));
-  const hasSensitiveFile = pathTokens(input).some(isSensitiveToken);
-
+function evaluatePayload(payload, guardrails) {
+  const hasSensitiveFile = pathTokens(haystackFromPayload(payload))
+    .some((token) => isSensitiveToken(token, guardrails));
   if (hasSensitiveFile) {
     return {
       blocked: true,
@@ -109,6 +124,10 @@ function evaluate(input) {
     };
   }
 
+  const command = commandFromPayload(payload);
+  const hasDangerousCommand = guardrails.dangerousCommandPatterns
+    .map((pattern) => new RegExp(pattern, 'i'))
+    .some((pattern) => pattern.test(command));
   if (hasDangerousCommand) {
     return {
       blocked: true,
@@ -116,48 +135,47 @@ function evaluate(input) {
     };
   }
 
-  return {
-    blocked: false,
-    reason: '',
-  };
+  return { blocked: false, reason: '' };
 }
 
-function runCopilotPreTool() {
-  const payload = parsePayload(readStdin());
-  const result = evaluate(haystackFromPayload(payload));
-
-  if (!result.blocked) {
-    return;
+function evaluateInput(input) {
+  try {
+    return evaluatePayload(parsePayload(input), loadGuardrails());
+  } catch {
+    return {
+      blocked: true,
+      reason: 'Blocked invalid local policy hook input',
+    };
   }
+}
 
+function writeCopilotDecision(reason) {
   process.stdout.write(JSON.stringify({
     permissionDecision: 'deny',
-    permissionDecisionReason: result.reason,
-    hookSpecificOutput: {
-      hookEventName: 'PreToolUse',
-      permissionDecision: 'deny',
-      permissionDecisionReason: result.reason,
-    },
+    permissionDecisionReason: reason,
   }));
 }
 
-function runCodexPreCommand() {
-  const payload = parsePayload(readStdin());
-  const result = evaluate(haystackFromPayload(payload));
-
-  if (!result.blocked) {
-    return;
+function runCopilotPreTool() {
+  const result = evaluateInput(readStdin());
+  if (result.blocked) {
+    writeCopilotDecision(result.reason);
   }
+}
 
-  console.error(result.reason);
-  process.exit(2);
+function runBlockingPreTool() {
+  const result = evaluateInput(readStdin());
+  if (result.blocked) {
+    console.error(result.reason);
+    process.exit(2);
+  }
 }
 
 if (mode === 'copilot-pre-tool') {
   runCopilotPreTool();
-} else if (mode === 'codex-pre-command') {
-  runCodexPreCommand();
+} else if (mode === 'codex-pre-tool' || mode === 'codex-pre-command' || mode === 'claude-pre-tool') {
+  runBlockingPreTool();
 } else {
-  console.error('Usage: guard.js <copilot-pre-tool|codex-pre-command>');
+  console.error('Usage: guard.js <copilot-pre-tool|codex-pre-tool|claude-pre-tool>');
   process.exit(64);
 }

@@ -1,9 +1,40 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-self_path="$(readlink -f "$0" 2>/dev/null || printf '%s' "$0")"
 selected_profile=""
 args=()
+
+canonical_path() {
+  node - "$1" <<'NODE'
+const fs = require('fs');
+
+try {
+  process.stdout.write(fs.realpathSync.native(process.argv[2]));
+} catch (error) {
+  console.error(`codex-safe: unable to resolve ${process.argv[2]}: ${error.message}`);
+  process.exit(69);
+}
+NODE
+}
+
+self_path="$(canonical_path "$0")"
+
+refuse_argument() {
+  echo "codex-safe: refusing '$1' because it can disable deterministic policy." >&2
+  exit 64
+}
+
+is_security_override() {
+  local key="${1%%=*}"
+  case "$key" in
+    sandbox_mode|sandbox_workspace_write|sandbox_workspace_write.*|default_permissions|permissions|permissions.*|approval_policy|hooks|hooks.*|features.hooks)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
 
 resolve_codex_binary() {
   local candidate
@@ -11,7 +42,7 @@ resolve_codex_binary() {
 
   while IFS= read -r candidate; do
     [[ -n "$candidate" ]] || continue
-    resolved="$(readlink -f "$candidate" 2>/dev/null || printf '%s' "$candidate")"
+    resolved="$(canonical_path "$candidate")"
     if [[ "$resolved" != "$self_path" ]]; then
       printf '%s\n' "$candidate"
       return 0
@@ -22,30 +53,50 @@ resolve_codex_binary() {
   exit 69
 }
 
-probe_needs_full_access_fallback() {
-  local codex_bin="$1"
-  local output
-  local status
-
-  set +e
-  output="$($codex_bin sandbox linux -- /bin/true 2>&1)"
-  status=$?
-  set -e
-
-  if [[ $status -eq 0 ]]; then
-    return 1
-  fi
-
-  if [[ "$output" == *"No permissions to create a new namespace"* ]] || [[ "$output" == *"kernel does not allow non-privileged user namespaces"* ]]; then
-    return 0
-  fi
-
-  printf '%s\n' "$output" >&2
-  exit $status
-}
-
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    --dangerously-bypass-approvals-and-sandbox|--dangerously-bypass-hook-trust)
+      refuse_argument "$1"
+      ;;
+    --sandbox|-s)
+      refuse_argument "$1"
+      ;;
+    --sandbox=*)
+      refuse_argument "${1%%=*}"
+      ;;
+    --disable)
+      if [[ $# -lt 2 ]]; then
+        echo "codex-safe: missing value for --disable." >&2
+        exit 64
+      fi
+      if [[ "$2" == "hooks" ]]; then
+        refuse_argument "--disable hooks"
+      fi
+      args+=("$1" "$2")
+      shift 2
+      ;;
+    --disable=hooks)
+      refuse_argument "$1"
+      ;;
+    --config|-c)
+      if [[ $# -lt 2 ]]; then
+        echo "codex-safe: missing value for $1." >&2
+        exit 64
+      fi
+      if is_security_override "$2"; then
+        refuse_argument "$1 $2"
+      fi
+      args+=("$1" "$2")
+      shift 2
+      ;;
+    --config=*)
+      config_override="${1#--config=}"
+      if is_security_override "$config_override"; then
+        refuse_argument "$1"
+      fi
+      args+=("$1")
+      shift
+      ;;
     --profile)
       if [[ $# -lt 2 ]]; then
         echo "codex-safe: missing value for --profile." >&2
@@ -85,26 +136,26 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [[ -z "$selected_profile" ]]; then
-  selected_profile="secure-global"
-fi
+runtime_profiles="${AI_AGENT_CONTRACT_RUNTIME_PROFILES:-$HOME/.local/share/ai-agent-contract/runtime-profiles.json}"
+selected_profile="$(node - "$runtime_profiles" "$selected_profile" <<'NODE'
+const fs = require('fs');
 
-case "$selected_profile" in
-  secure-global|deep|quick|verify)
-    ;;
-  *)
-    echo "codex-safe: profile '$selected_profile' is not approved. Allowed profiles: secure-global, deep, quick, verify." >&2
-    exit 64
-    ;;
-esac
+const [metadataPath, requestedProfile] = process.argv.slice(2);
+try {
+  const metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
+  const selectedProfile = requestedProfile || metadata.defaultProfile;
+  if (!selectedProfile || !Object.hasOwn(metadata.profiles || {}, selectedProfile)) {
+    const available = Object.keys(metadata.profiles || {}).join(', ');
+    throw new Error(`profile '${selectedProfile || requestedProfile}' is not defined; available profiles: ${available}`);
+  }
+  process.stdout.write(selectedProfile);
+} catch (error) {
+  console.error(`codex-safe: unable to resolve runtime profile metadata: ${error.message}`);
+  process.exit(64);
+}
+NODE
+)"
 
 codex_bin="$(resolve_codex_binary)"
-
-if [[ -f /.dockerenv || -f /run/.containerenv ]]; then
-  if probe_needs_full_access_fallback "$codex_bin"; then
-    echo "codex-safe: devcontainer sandbox is unavailable; falling back to danger-full-access." >&2
-    exec "$codex_bin" -c 'sandbox_mode="danger-full-access"' --profile "$selected_profile" "${args[@]}"
-  fi
-fi
 
 exec "$codex_bin" --profile "$selected_profile" "${args[@]}"

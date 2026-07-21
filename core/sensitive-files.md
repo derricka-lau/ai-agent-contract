@@ -4,13 +4,9 @@ This policy is a deterministic guardrail requirement, not just behavioural guida
 
 ## Protected Files
 
-Agents must not read, display, edit, diff, summarise, copy, or log content from:
-- Environment files: `.env`, `.env.local`, `.env.development`, `.env.production`, `.env.staging`, `.env.ci`, `.env.test`, `.envrc`.
-- Local or CI app config: `settings_local.php`, `settings.ci.php`, `app_local.php`, `app.ci.php`.
-- Keys and certificates: `*.pem`, `*.key`, `id_rsa`, `id_ed25519`.
-- Credential files: `.npmrc`, `.pypirc`, `.netrc`, `.aws/credentials`, `.azure/*`.
+Agents must not read, display, edit, diff, summarise, copy, or log content matching the protected rules below. The safe example names may be read when needed.
 
-Safe examples such as `.env.example`, `.env.sample`, and `.env.template` may be read when needed.
+<!-- GENERATED: sensitive-file-patterns -->
 
 ## Enforcement Expectations
 
@@ -21,4 +17,4 @@ Safe examples such as `.env.example`, `.env.sample`, and `.env.template` may be 
 
 ## Refusal Behaviour
 
-If a user asks to read, display, edit, or include content from a protected file, refuse briefly and offer a safe alternative such as environment-variable overrides, redacted examples, or `.env.example` / `.env.template`.
+If a user asks to read, display, edit, or include content from a protected file, refuse briefly and offer a safe alternative such as environment-variable overrides, redacted examples, or a safe example configuration.

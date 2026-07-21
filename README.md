@@ -1,67 +1,71 @@
 # ai-agent-contract
 
-Source-driven setup for popular AI coding tools, including GitHub Copilot, OpenAI Codex, Claude Code, Google Antigravity, and more, with deterministic guardrails for human judgement, Decision Ledger review, and Test-Driven Development (TDD).
+A source-driven contract and deterministic local guardrail setup for GitHub Copilot CLI, OpenAI Codex, and Claude Code.
 
-Even if AI can draft, search, and implement more of the work, it cannot own the decision, context, risk, or accountability. This repo makes Copilot pause at those points: material decisions go through the Decision Ledger review ladder, and behaviour changes start with the smallest relevant test case before implementation.
+The contract keeps human judgement in charge. It requires test-first behaviour changes, root-cause fixes, one source of truth, simple designs, and consideration of total engineering and operating cost.
 
-The repo has one source of truth under `core/`. Copilot instructions, hooks, agents, and prompts are generated during install, with additional local agent outputs available from the same contract when needed.
+## What Is Authoritative
 
-## Core Ideas
+The repository separates canonical sources from generated and installed outputs:
 
-- Human judgement stays in charge: AI proposes trade-offs, risks, and tests; the human reviews the decision and the first test case before implementation.
-- The Decision Ledger is the review ladder for material choices, from broad architecture down to testing, rollback, and workflow decisions.
-- TDD is the implementation gate: define or add the smallest failing automated test first, or state the no-test rationale explicitly before editing implementation.
-- GitHub Copilot, OpenAI Codex, Claude Code, Google Antigravity, and future agent runtimes can share the same source contract.
+- `core/global-contract.md` defines shared engineering behaviour.
+- `core/decision-ledger.md` defines normal `D1`/`D2`/`D3` review.
+- `core/guardrails.json` is the single machine-readable source for sensitive paths and dangerous command patterns.
+- `core/sensitive-files.md` explains the policy. Its pattern list is generated from `core/guardrails.json`; the Markdown file is not the enforcement mechanism.
+- `core/runtime-profiles.json` defines Codex runtime profiles and the default profile.
+- `core/roles.json`, `core/area-instructions.json`, `core/coach.md`, `core/user-context.md`, and `core/workflow.md` define their named contract surfaces.
+- `skills/*/SKILL.md` contains canonical shared skills.
 
-## Source Of Truth
+Generated runtime files are disposable outputs. Do not edit them by hand. Update the relevant canonical source and regenerate.
 
-Edit these files first:
+When guidance conflicts, platform and security constraints come first, followed by the most specific applicable source. The latest applicable, explicitly approved decision replaces older task-local guidance, and superseded documentation or configuration must be removed in the same change.
 
-- `core/global-contract.md` - shared behaviour contract, including human review, Decision Ledger, and TDD workflow requirements.
-- `core/decision-ledger.md` - mandatory material-decision protocol.
-- `core/sensitive-files.md` - human-readable sensitive-file policy.
-- `core/guardrails.json` - machine-enforced sensitive-file and dangerous-command policy.
-- `core/roles.json` - canonical architect, implementer, reviewer, and security-reviewer agents.
-- `core/area-instructions.json` - Copilot area-specific instruction files.
-- `core/user-context.md`, `core/workflow.md` - shared user context and workflow prompts, including TDD execution flow.
-- `skills/*/SKILL.md` - canonical shared skills copied to Copilot and compatible tool runtimes, including test strategy and validation rules.
+## Deterministic Sensitive-File Enforcement
 
-After changing `core/*`, run:
+Sensitive-file protection is implemented in code and runtime configuration:
 
-```bash
-node scripts/generate.js --check
-node scripts/doctor.js
-```
+- Copilot CLI runs the shared guard from a user-level `preToolUse` hook using the [current Copilot hook schema](https://docs.github.com/en/copilot/reference/hooks-reference).
+- Codex uses OS-enforced named permission profiles with deny-read globs, plus an all-tool `PreToolUse` hook as defence in depth. Permission profiles require Codex 0.138.0 or later and replace the older `sandbox_mode` configuration; see [Codex permissions](https://learn.chatgpt.com/docs/permissions).
+- Claude Code installs native `permissions.deny` rules and an all-tool `PreToolUse` hook backed by the shared guard.
+- Generated instructions also require refusal, but instructions are not treated as the deterministic control.
+
+The machine patterns live only in `core/guardrails.json`. `scripts/generate.js` derives runtime permission rules and the human-readable list from that source, while `scripts/doctor.js` checks for drift and exercises denial cases without opening protected files.
+
+## Quality And Cost Defaults
+
+The shared contract explicitly requires:
+
+- The simplest correct, secure, compatible, and testable design.
+- Root-cause fixes instead of hacks, coding workarounds, silent fallbacks, compatibility shims, duplicated special cases, or blanket suppressions.
+- One authoritative source for every rule, value, schema, and behaviour.
+- Material implementation, review, maintenance, CI, runtime, model/API, network, and storage costs to be considered and surfaced.
+- Final documentation to describe the resulting implementation, not a planned transition.
+
+Codex profiles are generated from `core/runtime-profiles.json`. The default does not force Fast mode, because Fast mode consumes extra credits. The `quick` profile is the lower-cost path for lighter work; deeper profiles retain stronger reasoning. Current model and effort selections remain centralised in that JSON file.
+
+Claude agents inherit the active session's model and effort instead of forcing Opus/max. The four web-search skills are explicit opt-in modes, so installing the skill catalogue does not trigger contradictory quick/deep searches on every message.
 
 ## Generated Runtime Targets
 
-Generated files are not committed. To inspect them locally, render them into a disposable directory:
+Render the current outputs into a disposable directory:
 
 ```bash
-node scripts/generate.js --out /tmp/ai-agent-contract-runtime
+runtime_dir="$(mktemp -d)"
+node scripts/generate.js --out "$runtime_dir"
+node scripts/generate.js --out "$runtime_dir" --check
+printf 'Generated runtime: %s\n' "$runtime_dir"
 ```
 
-Runtime files include the Copilot-first surface and compatible secondary surfaces:
+The output contains:
 
-- `copilot/instructions/*.instructions.md`, `copilot/hooks/*`, `copilot/agents/*.agent.md`.
-- Additional tool-specific runtime directories for compatible local agent CLIs.
-
-Do not edit generated files by hand. Edit `core/*`, then re-run the installer or render to a disposable directory.
-
-## Guardrails
-
-The most important guardrails are:
-
-- Decision Ledger before every material architecture, config, security, data, testing, performance, workflow, or rollback choice.
-- Human review of the chosen decision path and the first relevant test case before implementation.
-- Test-Driven Development (TDD) for behaviour changes: define or add the smallest failing automated test before implementation, or state the no-test rationale explicitly.
-- Deterministic denial of `.env*`, local app config, key/cert, and credential files.
-- Copilot instructions, hooks, and area-specific guidance generated from the same source contract.
-- Additional runtime-specific deny rules and filesystem guardrails generated from the same source contract.
-- Shared `scripts/guard.js` installed to `~/.local/share/ai-agent-contract/guard.js` and used by Copilot hooks and compatible secondary hooks.
-- Safe CLI wrappers for Copilot and compatible secondary runtimes.
+- Claude instructions, settings, hooks, agents, prompts, and coach skills.
+- Codex instructions, permission configuration, hooks, agents, profiles, prompts, and coach skills.
+- Copilot instructions, hooks, agents, prompts, and coach skills.
+- The VS Code settings fragment used to avoid loading the shared contract twice.
 
 ## Install
+
+Prerequisites are Git, Node.js, and npm. Node.js 22 is the tested version.
 
 ```bash
 git clone git@github.com:derricka-lau/ai-agent-contract.git ~/ai-agent-contract
@@ -69,18 +73,78 @@ cd ~/ai-agent-contract
 ./install.sh
 ```
 
-The installer:
+The installer intentionally does not install or upgrade Claude Code, Codex, or Copilot CLI. Manage those tools separately using their official installation methods. This avoids unpinned global upgrades and keeps configuration lifecycle separate from executable lifecycle.
 
-1. Verifies canonical sources and guardrails, including Decision Ledger and TDD policy sources.
-2. Backs up managed targets to `~/.ai-agent-contract-backup/<timestamp>/`.
-3. Generates runtime files into a temporary directory.
-4. Copies generated Copilot runtime files into `~/.copilot`, plus compatible secondary runtime files when available.
-5. Copies shared skills to each supported runtime.
-6. Installs the shared guard runtime to `~/.local/share/ai-agent-contract`.
-7. Installs CLI wrappers to `~/.local/bin`.
-8. Installs or updates the Copilot CLI and compatible secondary CLIs.
-9. Installs git config and global git hooks.
-10. Writes `~/.ai-agent-contract-manifest`.
+`install.sh`:
+
+1. Installs the single pinned project dependency with lifecycle scripts, install-time audit, and funding output disabled.
+2. Runs the generator and doctor before changing user configuration.
+3. Generates runtime files in a temporary directory.
+4. Acquires an atomic operation lock.
+5. Preflights every previously managed value and aborts before mutation if a managed file, field, shell line, or Git value has changed.
+6. Applies exact-file changes through a rollback journal.
+7. Merges only the owned VS Code JSONC fields while preserving comments and unrelated settings.
+8. Adds only the exact `~/.local/bin` shell line when needed.
+9. Sets only Git's global `core.hooksPath`, retaining its previous value for uninstall.
+10. Writes the versioned ownership ledger to `~/.local/share/ai-agent-contract/install-state.json`.
+
+The installer never copies or deletes whole runtime directories, never overwrites Git identity files, and never writes the legacy timestamp backup or checksum manifest. Previous content for an overwritten managed file is stored by checksum with mode `0600` and pruned when no ledger entry needs it.
+
+Tool CLI installation references:
+
+- [GitHub Copilot CLI](https://docs.github.com/en/copilot/how-tos/copilot-cli/set-up-copilot-cli/install-copilot-cli)
+- [Claude Code](https://docs.anthropic.com/en/docs/claude-code/getting-started)
+- [OpenAI Codex](https://learn.chatgpt.com/docs/codex)
+
+## Update Conflicts
+
+Run `./install.sh` again after changing or pulling canonical sources. An update stops before mutation if a previously managed value no longer matches the ledger. Resolve that conflict explicitly rather than silently overwriting the user change.
+
+Unrelated files inside `~/.claude`, `~/.codex`, `~/.copilot`, `~/.agents`, and other target directories are not owned and are left untouched.
+
+## Uninstall
+
+```bash
+cd ~/ai-agent-contract
+./uninstall.sh
+```
+
+Uninstall restores or removes only ledger-owned values:
+
+- An unchanged managed file is restored to its pre-install content or removed if it did not exist before installation.
+- A user-modified managed file is preserved.
+- Owned VS Code fields are restored only when their current values still match the installed values; unrelated fields and comments remain.
+- The installed shell line and Git hook path are restored only when still owned.
+- Unrelated files and settings are never removed.
+
+If no valid ledger exists, uninstall is a safe no-op. There is no legacy manifest fallback because directory-level ownership cannot be inferred safely.
+
+## Interrupted Operations
+
+Install and uninstall use an atomic lock directory with PID and token metadata. A live lock is never removed automatically.
+
+If a process was terminated, first remove only a verified stale lock:
+
+```bash
+node scripts/managed-files.js unlock --home "$HOME"
+```
+
+Then recover any journalled partial transaction:
+
+```bash
+node scripts/managed-files.js recover --home "$HOME"
+```
+
+Recovery restores the exact pre-transaction file contents, modes, and Git value before another install or uninstall proceeds.
+
+## VS Code
+
+When desktop VS Code's user settings directory exists, installation merges the fields from `core/vscode-settings.json` into:
+
+- macOS: `~/Library/Application Support/Code/User/settings.json`
+- Linux: `${XDG_CONFIG_HOME:-~/.config}/Code/User/settings.json`
+
+The JSONC-aware merge preserves comments, trailing commas, and unrelated settings. VS Code Insiders, VSCodium, Windows, and remote/container settings are not changed automatically.
 
 ## Devcontainers
 
@@ -94,54 +158,27 @@ Use this VS Code host setting:
 }
 ```
 
-`install-devcontainer.sh` delegates to `install.sh`, installs distro `bubblewrap` when root and `apt-get` are available, and keeps the optional secondary CLI routed through its safe wrapper so devcontainer installs can keep working if the container runtime blocks that CLI's inner Linux sandbox.
+`install-devcontainer.sh` delegates configuration installation to `install.sh` and installs the distribution `bubblewrap` package when running as root with `apt-get` available. It does not create an unmanaged `codex` symlink and does not replace a failed sandbox with unrestricted execution.
 
-For VS Code Copilot extension user-level customisation, configure the host-side VS Code settings to point at the installed locations you want loaded. The installer creates the files; VS Code decides which user/workspace locations to load.
-
-The VS Code Copilot extension can read both Copilot instruction files and other generated instruction files, which can load the shared contract twice. The installer keeps Copilot focused on its generated instruction files by merging the setting from `core/vscode-settings.json` into your desktop VS Code user `settings.json`:
-
-- macOS: `~/Library/Application Support/Code/User/settings.json`
-- Linux: `~/.config/Code/User/settings.json`
-
-The merge is idempotent, backs up the existing file first, and preserves your other settings; it is skipped if VS Code is not installed or the file contains comments. This loads the contract once in Copilot (from `~/.copilot/instructions/`) while preserving the area-specific `applyTo` rules. Other local agent CLIs can still read their own generated instruction files if you use them; this setting only affects the VS Code Copilot extension. VS Code Insiders, VSCodium, and devcontainer/remote settings are not covered automatically — apply the setting there yourself if needed.
+Use `codex-safe` or `copilot-safe` explicitly when you want the repository's wrapper behaviour.
 
 ## Coach Modes
 
-Three opt-in coaching modes let the AI do everything except write the
-decision-bearing implementation, so you keep your engineering judgement sharp.
-They inherit the full contract; the Decision Ledger still settles architecture
-and dependencies first. The modes differ only in how much the AI writes into the
-files; in all three it researches, summarises the agreed decisions, specifies the
-failing test, hands the logic to you with a `TODO(human)` marker, and reviews what
-you write.
+Three opt-in modes are generated from the single `core/coach.md` source:
 
-- `guide`: guidance only, no file writing. The AI gives the spec, checklist, and
-  steps in chat; you write the test, the scaffolding, and the logic. Maximum
-  practice for keeping an already-known skill warm.
-- `scaffolding`: the AI writes the failing test and the scaffolding (signature,
-  imports, structure) into the files; you write the logic. Skips boilerplate
-  typing.
-- `tutor` (token-heavy): as scaffolding, plus a line-by-line explanation while you
-  write the logic, for learning a new area from scratch.
-
-All three render from one source, `core/coach.md`, into one composed `SKILL.md` per mode, installed to each tool's skills directory.Re-invoke if the mode drifts in a long session.
-
+- `guide-mode`: guidance only; the user writes test, scaffolding, and logic.
+- `scaffolding-mode`: the agent writes the failing test and scaffolding; the user writes the decision-bearing logic.
+- `tutor-mode`: scaffolding plus line-by-line teaching while the user writes the logic.
 
 ## Validate
 
 ```bash
-node scripts/generate.js --check
-rm -rf /tmp/ai-agent-contract-runtime
-node scripts/generate.js --out /tmp/ai-agent-contract-runtime
-node scripts/generate.js --out /tmp/ai-agent-contract-runtime --check
-node scripts/doctor.js
-bash -n install.sh install-devcontainer.sh uninstall.sh
+npm ci --ignore-scripts --no-audit --no-fund
+npm run check
+for file in scripts/*.js; do node --check "$file"; done
+bash -n install.sh install-devcontainer.sh uninstall.sh codex-safe copilot-safe hooks/pre-commit hooks/pre-push
+git diff --check
+npm audit --omit=dev
 ```
 
-For a safe install rehearsal:
-
-```bash
-HOME="$(mktemp -d)" PATH="$HOME/bin:$PATH" SHELL=/bin/bash bash install.sh
-```
-
-Use an npm stub in fake-home rehearsals if you do not want global package installs.
+CI runs the lockfile install, complete Node test suite, generator, doctor, JavaScript syntax checks, shell syntax checks, and diff hygiene on Node.js 22.

@@ -1,6 +1,6 @@
 ---
 name: web-search-rag-deep
-description: Perform exhaustive, multi-pass web searches before every single response — no exceptions — and cite every factual claim with inline linked citations. Prioritises depth and quality over speed, using 5–10+ searches, aggressive web_fetch of full articles, iterative refinement, and cross-referencing across sources. Use this skill on ALL user messages — greetings, questions, follow-ups, code requests, casual chat, everything. If a user message exists, this skill triggers. This is the user's explicit preference and overrides any default behavior where the assistant might skip searching. Even if the query seems simple, trivial, or conversational, search first, then respond.
+description: Perform exhaustive, multi-pass web research with citations. Use only when the user explicitly invokes web-search-rag-deep or explicitly requests exhaustive web research where depth matters more than latency and token cost.
 ---
 
 # Web Search RAG — Always Search, Always Cite, Maximum Depth

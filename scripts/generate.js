@@ -8,6 +8,7 @@ const args = process.argv.slice(2);
 const check = args.includes('--check');
 const outIndex = args.indexOf('--out');
 const outputRoot = outIndex === -1 ? null : path.resolve(args[outIndex + 1] || '');
+const sensitivePolicyMarker = '<!-- GENERATED: sensitive-file-patterns -->';
 
 if (outIndex !== -1 && !args[outIndex + 1]) {
   console.error('Usage: node scripts/generate.js --out <directory> [--check]');
@@ -42,13 +43,33 @@ function markdownJoin(parts) {
   return `${parts.map((part) => part.trim()).join('\n\n')}\n`;
 }
 
-function toolContract(title) {
+function markdownCodeList(values) {
+  return values.map((value) => `\`${value}\``).join(', ');
+}
+
+function sensitiveFilePolicy(guardrails) {
+  const source = read('core/sensitive-files.md');
+  const patternGroups = [
+    `- Exact file names: ${markdownCodeList(guardrails.protectedBaseNames)}.`,
+    `- Filename suffixes: ${markdownCodeList(guardrails.protectedExtensions)}.`,
+    `- Path fragments: ${markdownCodeList(guardrails.protectedPathFragments)}.`,
+    `- Safe example names: ${markdownCodeList(guardrails.safeExampleBaseNames)}.`,
+  ].join('\n');
+
+  if (!source.includes(sensitivePolicyMarker)) {
+    throw new Error('core/sensitive-files.md is missing the sensitive-file pattern marker');
+  }
+
+  return source.replace(sensitivePolicyMarker, patternGroups);
+}
+
+function toolContract(title, guardrails) {
   return markdownJoin([
     `# ${title}`,
     generatedHeader('md'),
     read('core/global-contract.md').replace(/^# Global Contract\n+/, ''),
     read('core/decision-ledger.md'),
-    read('core/sensitive-files.md'),
+    sensitiveFilePolicy(guardrails),
     read('core/user-context.md'),
   ]);
 }
@@ -94,8 +115,6 @@ function claudeAgent(role) {
     `name: ${role.id}`,
     `description: ${role.description}`,
     `tools: ${role.claudeTools}`,
-    'model: opus',
-    'effort: max',
     `maxTurns: ${role.readOnly ? 20 : 30}`,
   ];
 
@@ -130,14 +149,60 @@ function tomlString(value) {
   return `"""\n${value.trim()}\n"""`;
 }
 
+function tomlLiteral(value) {
+  if (typeof value === 'string') {
+    return JSON.stringify(value);
+  }
+
+  if (typeof value === 'boolean' || typeof value === 'number') {
+    return String(value);
+  }
+
+  if (Array.isArray(value)) {
+    return `[${value.map(tomlLiteral).join(', ')}]`;
+  }
+
+  throw new Error(`Unsupported TOML profile value: ${JSON.stringify(value)}`);
+}
+
+function validateRuntimeProfiles(runtimeProfiles) {
+  if (!runtimeProfiles || typeof runtimeProfiles !== 'object' || Array.isArray(runtimeProfiles)) {
+    throw new Error('core/runtime-profiles.json must contain an object');
+  }
+
+  const profiles = runtimeProfiles.profiles;
+  if (!profiles || typeof profiles !== 'object' || Array.isArray(profiles)) {
+    throw new Error('core/runtime-profiles.json must define a profiles object');
+  }
+
+  if (!Object.hasOwn(profiles, runtimeProfiles.defaultProfile)) {
+    throw new Error('core/runtime-profiles.json defaultProfile must name a defined profile');
+  }
+
+  for (const [name, settings] of Object.entries(profiles)) {
+    if (!/^[A-Za-z0-9_-]+$/.test(name)) {
+      throw new Error(`Invalid Codex profile name: ${name}`);
+    }
+    if (!settings || typeof settings !== 'object' || Array.isArray(settings)) {
+      throw new Error(`Codex profile ${name} must contain a settings object`);
+    }
+  }
+}
+
+function codexProfileConfig(settings) {
+  const values = Object.entries(settings)
+    .map(([key, value]) => `${key} = ${tomlLiteral(value)}`)
+    .join('\n');
+
+  return `${generatedHeader('toml')}${values}\n`;
+}
+
 function codexAgent(role) {
   return [
     generatedHeader('toml').trimEnd(),
     `name = "${role.codexName}"`,
     `description = "${role.description}"`,
-    'model = "gpt-5.4"',
-    'model_reasoning_effort = "xhigh"',
-    `sandbox_mode = "${role.codexSandbox}"`,
+    `default_permissions = "${role.readOnly ? 'contract-readonly' : 'contract-workspace'}"`,
     `developer_instructions = ${tomlString(role.body)}`,
     '',
   ].join('\n');
@@ -189,12 +254,14 @@ function denyPatterns(guardrails) {
   return readEdit;
 }
 
-function codexProjectRootDenyPatterns(guardrails) {
-  return guardrails.protectedBaseNames;
-}
-
-function codexAbsoluteDenyPatterns(guardrails) {
-  return denyPatterns(guardrails).filter((pattern) => pattern.startsWith('~'));
+function codexWorkspaceDenyPatterns(guardrails) {
+  return [
+    ...guardrails.protectedBaseNames.map((baseName) => `**/${baseName}`),
+    ...guardrails.protectedExtensions.map((extension) => `**/*${extension}`),
+    ...guardrails.protectedPathFragments.map((fragment) => (
+      `**/${fragment.replace(/\/$/, '')}`
+    )),
+  ];
 }
 
 function claudeSettings(guardrails) {
@@ -213,8 +280,6 @@ function claudeSettings(guardrails) {
 
   return `${JSON.stringify({
     language: 'british english',
-    alwaysThinkingEnabled: true,
-    effortLevel: 'max',
     attribution: { commit: '', pr: '' },
     permissions: {
       allow: [
@@ -230,12 +295,14 @@ function claudeSettings(guardrails) {
       ],
     },
     hooks: {
-      Notification: [
+      PreToolUse: [
         {
+          matcher: '.*',
           hooks: [
             {
               type: 'command',
-              command: 'terminal-notifier -message "$CLAUDE_NOTIFICATION" -title "Claude Code" 2>/dev/null || notify-send "Claude Code" "$CLAUDE_NOTIFICATION" 2>/dev/null || true',
+              command: '$HOME/.claude/hooks/pre-tool-guard.sh',
+              timeout: 15,
             },
           ],
         },
@@ -244,50 +311,49 @@ function claudeSettings(guardrails) {
   }, null, 2)}\n`;
 }
 
-function codexConfig() {
-  return `${generatedHeader('toml')}model = "gpt-5.3-codex"
-model_reasoning_effort = "xhigh"
-service_tier = "fast"
-approval_policy = "on-request"
-sandbox_mode = "workspace-write"
-web_search = "cached"
-notify = ["terminal-notifier", "-message", "Codex turn complete", "-title", "Codex"]
+function codexConfig(guardrails, runtimeProfiles) {
+  const workspaceDenyRules = codexWorkspaceDenyPatterns(guardrails)
+    .map((pattern) => `${JSON.stringify(pattern)} = "deny"`)
+    .join('\n');
+  const defaultSettings = runtimeProfiles.profiles[runtimeProfiles.defaultProfile];
+  const baseSettings = Object.entries(defaultSettings)
+    .map(([key, value]) => `${key} = ${tomlLiteral(value)}`)
+    .join('\n');
 
-[sandbox_workspace_write]
-network_access = false
+  return `${generatedHeader('toml')}${baseSettings}
+default_permissions = "contract-workspace"
+[permissions.contract-workspace.filesystem]
+":minimal" = "read"
+"~/.ssh" = "deny"
+"~/.aws/credentials" = "deny"
+"~/.azure" = "deny"
+glob_scan_max_depth = 20
+
+[permissions.contract-workspace.filesystem.":workspace_roots"]
+"." = "write"
+${workspaceDenyRules}
+
+[permissions.contract-workspace.network]
+enabled = false
+
+[permissions.contract-readonly.filesystem]
+":minimal" = "read"
+"~/.ssh" = "deny"
+"~/.aws/credentials" = "deny"
+"~/.azure" = "deny"
+glob_scan_max_depth = 20
+
+[permissions.contract-readonly.filesystem.":workspace_roots"]
+"." = "read"
+${workspaceDenyRules}
+
+[permissions.contract-readonly.network]
+enabled = false
 
 [features]
 hooks = true
 multi_agent = true
 shell_snapshot = true
-
-[profiles.secure-global]
-model = "gpt-5.4"
-model_reasoning_effort = "high"
-service_tier = "fast"
-approval_policy = "on-request"
-web_search = "cached"
-
-[profiles.deep]
-model = "gpt-5.4"
-model_reasoning_effort = "high"
-service_tier = "fast"
-approval_policy = "never"
-web_search = "cached"
-
-[profiles.quick]
-model = "gpt-5.4-mini"
-model_reasoning_effort = "medium"
-service_tier = "fast"
-approval_policy = "on-request"
-web_search = "cached"
-
-[profiles.verify]
-model = "gpt-5.4"
-model_reasoning_effort = "high"
-service_tier = "fast"
-approval_policy = "on-request"
-web_search = "cached"
 
 [tui]
 notifications = true
@@ -297,7 +363,7 @@ animations = true
 persistence = "save-all"
 
 [agents]
-max_threads = 6
+max_threads = 4
 max_depth = 1
 job_max_runtime_seconds = 1800
 `;
@@ -305,6 +371,7 @@ job_max_runtime_seconds = 1800
 
 function hookWrapper(kind) {
   return `#!/usr/bin/env bash
+${generatedHeader('sh').trimEnd()}
 set -euo pipefail
 
 node "$HOME/.local/share/ai-agent-contract/guard.js" ${kind}
@@ -313,9 +380,11 @@ node "$HOME/.local/share/ai-agent-contract/guard.js" ${kind}
 
 function generateFiles() {
   const guardrails = readJson('core/guardrails.json');
+  const runtimeProfiles = readJson('core/runtime-profiles.json');
   const roles = readJson('core/roles.json').roles;
   const areaInstructions = readJson('core/area-instructions.json');
-  const contract = toolContract('Global Contract');
+  validateRuntimeProfiles(runtimeProfiles);
+  const contract = toolContract('Global Contract', guardrails);
 
   const files = new Map();
 
@@ -326,32 +395,35 @@ function generateFiles() {
   files.set('copilot/prompts/workflow.md', read('core/workflow.md'));
   files.set('vscode/settings.json', `${JSON.stringify(readJson('core/vscode-settings.json'), null, 2)}\n`);
   files.set('claude/settings.json', claudeSettings(guardrails));
-  files.set('claude/managed-settings.json', `${JSON.stringify({ permissions: { disableBypassPermissionsMode: 'disable' } }, null, 2)}\n`);
-  files.set('codex/config.toml', codexConfig(guardrails));
+  files.set('claude/hooks/pre-tool-guard.sh', hookWrapper('claude-pre-tool'));
+  files.set('codex/config.toml', codexConfig(guardrails, runtimeProfiles));
+  for (const [name, settings] of Object.entries(runtimeProfiles.profiles)) {
+    files.set(`codex/${name}.config.toml`, codexProfileConfig(settings));
+  }
   files.set('codex/hooks.json', `${JSON.stringify({
     hooks: {
       PreToolUse: [
         {
-          matcher: 'Bash',
+          matcher: '.*',
           hooks: [
             {
               type: 'command',
-              command: '$HOME/.codex/hooks/pre-command-guard.sh',
+              command: '$HOME/.codex/hooks/pre-tool-guard.sh',
             },
           ],
         },
       ],
     },
   }, null, 2)}\n`);
-  files.set('codex/hooks/pre-command-guard.sh', hookWrapper('codex-pre-command'));
+  files.set('codex/hooks/pre-tool-guard.sh', hookWrapper('codex-pre-tool'));
   files.set('copilot/hooks/policy.json', `${JSON.stringify({
     version: 1,
     hooks: {
-      PreToolUse: [
+      preToolUse: [
         {
           type: 'command',
-          command: '$HOME/.copilot/hooks/pre-tool-guard.sh',
-          timeout: 15,
+          bash: '$HOME/.copilot/hooks/pre-tool-guard.sh',
+          timeoutSec: 15,
         },
       ],
     },

@@ -1,6 +1,6 @@
 ---
 name: web-search-rag-official-quick
-description: Perform a fast, lean web search before every single response — no exceptions — with a strong mandate to find and cite official primary sources (official documentation, GitHub repos, government sites, peer-reviewed papers, company press releases, RFC specs, WHO/CDC/FDA data, SEC filings, etc.) over secondary reporting. Uses 1–3 smartly-crafted queries designed to surface primary sources on the first try. Use this skill on ALL user messages — greetings, questions, follow-ups, code requests, casual chat, everything. If a user message exists, this skill triggers. This is the user's explicit preference and overrides any default behavior where the assistant might skip searching.
+description: Perform fast, lean web research prioritising official primary sources. Use only when the user explicitly invokes web-search-rag-official-quick or explicitly requests a quick, primary-source-led lookup.
 ---
 
 # Web Search RAG — Official Sources Quick Mode

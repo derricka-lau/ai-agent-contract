@@ -1,0 +1,11 @@
+{
+  "name": "ai-agent-contract",
+  "private": true,
+  "scripts": {
+    "test": "node --test",
+    "check": "npm test && node scripts/generate.js --check && node scripts/doctor.js"
+  },
+  "dependencies": {
+    "jsonc-parser": "3.3.1"
+  }
+}

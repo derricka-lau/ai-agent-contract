@@ -66,7 +66,6 @@ Use small decisions, but not meaningless ones.
 
 Ask about:
 - Which implementation strategy to use.
-- Whether compatibility shims stay or call sites are updated directly.
 - Whether a change is global, per-workflow, or file-by-file.
 - Whether to trim, delete, retain, or generate shared instructions, fixtures, helpers, hooks, agents, skills, or configs.
 - Whether generated artefacts should be committed, produced locally, or produced in CI.

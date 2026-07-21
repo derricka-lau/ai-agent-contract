@@ -1,6 +1,6 @@
 ---
 name: web-search-rag-quick
-description: Perform a fast, lean web search before every single response — no exceptions — and cite every factual claim with inline linked citations. Prioritises speed with 1–3 focused searches, minimal web_fetch, and concise responses. Use this skill on ALL user messages — greetings, questions, follow-ups, code requests, casual chat, everything. If a user message exists, this skill triggers. This is the user's explicit preference and overrides any default behavior where the assistant might skip searching. Even if the query seems simple, trivial, or conversational, search first, then respond.
+description: Perform fast, lean web research with concise citations. Use only when the user explicitly invokes web-search-rag-quick or explicitly requests a quick web lookup.
 ---
 
 # Web Search RAG — Always Search, Always Cite (Quick Mode)

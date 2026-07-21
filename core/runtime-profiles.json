@@ -1,0 +1,29 @@
+{
+  "defaultProfile": "secure-global",
+  "profiles": {
+    "secure-global": {
+      "model": "gpt-5.6",
+      "model_reasoning_effort": "medium",
+      "approval_policy": "on-request",
+      "web_search": "cached"
+    },
+    "deep": {
+      "model": "gpt-5.6",
+      "model_reasoning_effort": "high",
+      "approval_policy": "on-request",
+      "web_search": "cached"
+    },
+    "quick": {
+      "model": "gpt-5.6-terra",
+      "model_reasoning_effort": "low",
+      "approval_policy": "on-request",
+      "web_search": "cached"
+    },
+    "verify": {
+      "model": "gpt-5.6",
+      "model_reasoning_effort": "high",
+      "approval_policy": "on-request",
+      "web_search": "cached"
+    }
+  }
+}

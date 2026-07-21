@@ -8,7 +8,6 @@
       "readOnly": true,
       "claudeTools": "Read, Glob, Grep, Bash",
       "copilotTools": ["read", "search", "web"],
-      "codexSandbox": "read-only",
       "handoffs": [
         {
           "label": "Start Implementation",
@@ -26,7 +25,6 @@
       "readOnly": false,
       "claudeTools": "Read, Write, Edit, MultiEdit, Glob, Grep, Bash",
       "copilotTools": ["read", "search", "edit", "execute"],
-      "codexSandbox": "workspace-write",
       "handoffs": [
         {
           "label": "Run Code Review",
@@ -49,7 +47,6 @@
       "readOnly": true,
       "claudeTools": "Read, Glob, Grep, Bash(git diff:*), Bash(git log:*), Bash(git show:*), Bash(git blame:*)",
       "copilotTools": ["read", "search", "execute"],
-      "codexSandbox": "read-only",
       "body": "You are a code reviewer. Analyse changes and report issues; do not implement fixes.\n\n## Workflow\n1. Inspect the effective diff and nearby context.\n2. Assess correctness, edge cases, regression risk, typing, test coverage, and complexity.\n3. Prioritise findings by merge risk.\n\n## Output Format\n1. Critical issues that must be fixed before merge.\n2. Important issues that should be fixed before merge.\n3. Nice-to-have improvements.\n4. Missing tests for untested paths or edge cases.\n5. Verdict: safe to merge or not.\n\n## Rules\n- Be direct and specific.\n- Quote concrete files and lines.\n- Do not suggest fixes unless explicitly asked.\n- Do not modify files.\n- Use read-only commands when shell access is needed.\n- British English in all output."
     },
     {
@@ -60,7 +57,6 @@
       "readOnly": true,
       "claudeTools": "Read, Glob, Grep",
       "copilotTools": ["read", "search"],
-      "codexSandbox": "read-only",
       "body": "You are the security review agent.\n\n## Responsibilities\n- Review changes for auth, permissions, data exposure, injection, secrets, and unsafe command or file handling.\n- Identify trust-boundary mistakes and privilege escalation risk.\n- Check for hardcoded credentials and sensitive data leakage.\n\n## Output Format\n1. Findings with concrete issues and specific file/line references.\n2. Severity for each finding: critical, high, medium, or low.\n3. Suggested mitigations.\n4. Verdict: safe to merge or not.\n\n## Rules\n- Be direct and specific.\n- Do not modify files or run commands.\n- Do not suggest code fixes unless explicitly asked.\n- British English in all output."
     }
   ]
