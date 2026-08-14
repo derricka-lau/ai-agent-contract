@@ -103,6 +103,12 @@ test('generated contracts include quality, cost, precedence, and ownership rules
   assert.match(contract, /Do not ship coding workarounds/i);
   assert.match(contract, /one authoritative source/i);
   assert.match(contract, /latest applicable, explicitly approved decision/i);
+  assert.match(contract, /Tests are not append-only/i);
+  assert.match(contract, /Superseded tests and fixtures are removed/i);
+  assert.match(contract, /Preserve the existing regression baseline/i);
+  assert.match(contract, /replacement behaviour passes/i);
+  assert.match(contract, /external or version-sensitive assumptions/i);
+  assert.match(contract, /small, independently reviewable commits/i);
   assert.match(contract, /Wait for the user's choice before continuing\./);
   assert.doesNotMatch(contract, /Delegated Decision Mode/);
 });

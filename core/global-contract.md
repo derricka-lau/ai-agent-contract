@@ -17,6 +17,8 @@
 - Reuse existing patterns and abstractions before introducing new ones.
 - Avoid speculative refactors and unrelated edits.
 - Do not implement behaviour changes before the relevant failing or demonstrably missing automated test has been identified for review, unless the user explicitly approves a no-test path.
+- Tests are not append-only. Prefer updating or replacing the nearest existing behavioural test before adding another. Remove superseded tests, fixtures, and helpers in the same change. Do not retain negative legacy-absence or source-text assertions unless absence is itself a security, compatibility, or public-contract requirement. The final test surface must describe current behaviour, not implementation history.
+- Preserve the existing regression baseline until the replacement behavioural test exists and has failed for the intended reason. Remove or rewrite superseded tests only after the replacement behaviour passes.
 - Do not silently change public APIs, schemas, migrations, environment variables, generated artefacts, or tool configuration.
 
 ## Simplicity And Cost
@@ -74,6 +76,7 @@
 - Run the relevant audit command when dependencies change.
 
 ## Git Discipline
+- Structure implementation as small, independently reviewable commits with one purpose each. Do not create commits unless the user has authorised committing.
 - Never amend published commits or force-push protected branches unless explicitly requested.
 - Commit messages use imperative mood and explain the reason.
 - Do not commit secrets, `.env` files, local config, credentials, or generated private artefacts.
@@ -85,6 +88,7 @@
 - Do not add error handling for scenarios that cannot happen.
 
 ## Source Verification
+- During planning, identify external or version-sensitive assumptions and verify them against current official primary sources. Use deeper research when uncertainty, security, compatibility, or architectural risk justifies it; do not browse extensively for stable local behaviour.
 - Never trust generated guides or migration notes at face value.
 - Verify claims against official docs or the actual codebase before implementing.
 - If a claim cannot be verified, say so explicitly.
@@ -96,6 +100,7 @@
 
 ## Definition Of Done
 - A relevant automated test existed or was added before implementation when feasible, and the test case was surfaced for review, or the no-test rationale is stated explicitly.
+- Superseded tests and fixtures are removed; new tests assert observable contracts rather than historical implementation details.
 - Relevant tests pass.
 - Lint, format, type-check, static analysis, and build pass when available.
 - No debug statements, hardcoded secrets, or commented-out code are introduced.
