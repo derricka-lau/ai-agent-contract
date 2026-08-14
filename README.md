@@ -158,7 +158,21 @@ Use this VS Code host setting:
 }
 ```
 
-`install-devcontainer.sh` delegates configuration installation to `install.sh` and installs the distribution `bubblewrap` package when running as root with `apt-get` available. It does not create an unmanaged `codex` symlink and does not replace a failed sandbox with unrestricted execution.
+`install-devcontainer.sh` delegates configuration installation to `install.sh`, installs the distribution `bubblewrap` package when running as root with `apt-get` available, and verifies that Bubblewrap can create the namespaces required by Codex. Installing the package alone is insufficient when the outer container's security policy blocks namespace creation.
+
+If the preflight fails, add the following settings to the project's `devcontainer.json` and rebuild the devcontainer:
+
+```json
+{
+  "runArgs": [
+    "--cap-add=SYS_ADMIN",
+    "--security-opt=seccomp=unconfined",
+    "--security-opt=apparmor=unconfined"
+  ]
+}
+```
+
+These settings relax the outer Docker sandbox so that Codex can construct its own inner Bubblewrap sandbox. Use them only for a trusted development container. The installer does not create an unmanaged `codex` symlink, make Bubblewrap setuid, or replace a failed sandbox with unrestricted execution. Do not use Codex dangerous-access flags as a workaround. If the preflight still fails after rebuilding, follow the current [Codex sandbox prerequisites](https://learn.chatgpt.com/docs/sandboxing#prerequisites) for the host platform.
 
 Use `codex-safe` or `copilot-safe` explicitly when you want the repository's wrapper behaviour.
 
