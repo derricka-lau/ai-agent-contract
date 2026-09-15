@@ -22,14 +22,16 @@ When guidance conflicts, platform and security constraints come first, followed 
 
 ## Deterministic Sensitive-File Enforcement
 
+The deterministic enforcement layer is installed only by the `hardened` profile. The default `prompt` profile provides portable guidance and does not claim to enforce sensitive-file policy.
+
 Sensitive-file protection is implemented in code and runtime configuration:
 
 - Copilot CLI runs the shared guard from a user-level `preToolUse` hook using the [current Copilot hook schema](https://docs.github.com/en/copilot/reference/hooks-reference).
-- Codex uses OS-enforced named permission profiles with deny-read globs, plus an all-tool `PreToolUse` hook as defence in depth. Permission profiles require Codex 0.138.0 or later and replace the older `sandbox_mode` configuration; see [Codex permissions](https://learn.chatgpt.com/docs/permissions).
+- Codex keeps the platform-native sandbox and permission defaults unset, plus an all-tool `PreToolUse` hook as optional defence in depth. Native Windows sandbox selection remains with Codex and the host or administrator policy.
 - Claude Code installs native `permissions.deny` rules and an all-tool `PreToolUse` hook backed by the shared guard.
 - Generated instructions also require refusal, but instructions are not treated as the deterministic control.
 
-The machine patterns live only in `core/guardrails.json`. `scripts/generate.js` derives runtime permission rules and the human-readable list from that source, while `scripts/doctor.js` checks for drift and exercises denial cases without opening protected files.
+The machine patterns live only in `core/guardrails.json`. `scripts/generate.js` derives the tool-specific guard integration and human-readable list from that source, while `scripts/doctor.js` checks for drift and exercises denial cases without opening protected files.
 
 ## Quality And Cost Defaults
 
@@ -47,21 +49,24 @@ Claude agents inherit the active session's model and effort instead of forcing O
 
 ## Generated Runtime Targets
 
+Generation is split into two explicit profiles. `prompt` is the default and contains portable instruction, workflow, area-instruction, and coach-skill files. `hardened` adds runtime-specific settings, permission rules, hooks, agents, wrappers, and Git enforcement.
+
 Render the current outputs into a disposable directory:
 
 ```bash
 runtime_dir="$(mktemp -d)"
-node scripts/generate.js --out "$runtime_dir"
-node scripts/generate.js --out "$runtime_dir" --check
+node scripts/generate.js --profile prompt --out "$runtime_dir"
+node scripts/generate.js --profile prompt --out "$runtime_dir" --check
+node scripts/generate.js --profile hardened --out "$runtime_dir"
 printf 'Generated runtime: %s\n' "$runtime_dir"
 ```
 
-The output contains:
+The prompt output contains:
 
-- Claude instructions, settings, hooks, agents, prompts, and coach skills.
-- Codex instructions, permission configuration, hooks, agents, profiles, prompts, and coach skills.
-- Copilot instructions, hooks, agents, prompts, and coach skills.
-- The VS Code settings fragment used to avoid loading the shared contract twice.
+- Claude, Codex, and Copilot instructions and prompts.
+- Shared area instructions and coach skills.
+
+The hardened output adds the tool-specific configuration and enforcement files, including the VS Code settings fragment used to avoid loading the shared contract twice.
 
 ## Install
 
@@ -73,19 +78,21 @@ cd ~/ai-agent-contract
 ./install.sh
 ```
 
+The installer defaults to the `prompt` profile. Use `./install.sh --profile hardened` when deterministic runtime enforcement is required and the relevant tool versions have been verified.
+
 The installer intentionally does not install or upgrade Claude Code, Codex, or Copilot CLI. Manage those tools separately using their official installation methods. This avoids unpinned global upgrades and keeps configuration lifecycle separate from executable lifecycle.
 
 `install.sh`:
 
 1. Installs the single pinned project dependency with lifecycle scripts, install-time audit, and funding output disabled.
-2. Runs the generator and doctor before changing user configuration.
+2. Runs the generator before changing user configuration; the `hardened` profile also runs the compatibility doctor.
 3. Generates runtime files in a temporary directory.
 4. Acquires an atomic operation lock.
 5. Preflights every previously managed value and aborts before mutation if a managed file, field, shell line, or Git value has changed.
 6. Applies exact-file changes through a rollback journal.
 7. Merges only the owned VS Code JSONC fields while preserving comments and unrelated settings.
-8. Adds only the exact `~/.local/bin` shell line when needed.
-9. Sets only Git's global `core.hooksPath`, retaining its previous value for uninstall.
+8. Adds only the exact `~/.local/bin` shell line when the `hardened` profile is selected.
+9. Sets only Git's global `core.hooksPath` when the `hardened` profile is selected, retaining its previous value for uninstall.
 10. Writes the versioned ownership ledger to `~/.local/share/ai-agent-contract/install-state.json`.
 
 The installer never copies or deletes whole runtime directories, never overwrites Git identity files, and never writes the legacy timestamp backup or checksum manifest. Previous content for an overwritten managed file is stored by checksum with mode `0600` and pruned when no ledger entry needs it.
@@ -147,6 +154,8 @@ When desktop VS Code's user settings directory exists, installation merges the f
 The JSONC-aware merge preserves comments, trailing commas, and unrelated settings. VS Code Insiders, VSCodium, Windows, and remote/container settings are not changed automatically.
 
 ## Devcontainers
+
+The default prompt profile does not require Bubblewrap or elevated container namespace permissions. The devcontainer installer only runs the Codex sandbox preflight when invoked with `--profile hardened`.
 
 Use this VS Code host setting:
 

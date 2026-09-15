@@ -22,6 +22,38 @@ shell_rc_path() {
   esac
 }
 
+verify_prompt_installed() {
+  local pass=0
+  local fail=0
+
+  check() {
+    local label="$1"
+    shift
+
+    if "$@" >/dev/null 2>&1; then
+      log "  [PASS] $label"
+      pass=$((pass + 1))
+    else
+      log "  [FAIL] $label"
+      fail=$((fail + 1))
+    fi
+  }
+
+  log ""
+  log "=== Prompt verification ==="
+  check "Install ledger written" test -f "$HOME/.local/share/ai-agent-contract/install-state.json"
+  check "Copilot instructions installed" test -f "$HOME/.copilot/instructions/global-contract.instructions.md"
+  check "Claude instructions installed" test -f "$HOME/.claude/CLAUDE.md"
+  check "Codex instructions installed" test -f "$HOME/.codex/AGENTS.md"
+  check "Skills installed" test -f "$HOME/.copilot/skills/php-cakephp/SKILL.md"
+
+  log ""
+  log "Results: $pass passed, $fail failed"
+  if [[ "$fail" -gt 0 ]]; then
+    exit 1
+  fi
+}
+
 verify_installed() {
   local pass=0
   local fail=0
@@ -48,8 +80,7 @@ verify_installed() {
   check "Claude deny rules installed" grep -Fq 'Read(**/.env.local)' "$HOME/.claude/settings.json"
   check "Claude deterministic hook installed" test -x "$HOME/.claude/hooks/pre-tool-guard.sh"
   check "Codex config installed" test -f "$HOME/.codex/config.toml"
-  check "Codex permission profile installed" grep -Fq 'default_permissions = "contract-workspace"' "$HOME/.codex/config.toml"
-  check "Codex sensitive-file deny installed" grep -Fq '"**/.env" = "deny"' "$HOME/.codex/config.toml"
+  check "Codex native sandbox defaults preserved" sh -c '! grep -Eq "^(default_permissions|sandbox_mode|sandbox_workspace_write)" "$1" && ! grep -Fq "[permissions." "$1"' _ "$HOME/.codex/config.toml"
   check "Shared guard installed" test -x "$HOME/.local/share/ai-agent-contract/guard.js"
   check "Runtime profile metadata installed" test -f "$HOME/.local/share/ai-agent-contract/runtime-profiles.json"
   check "Role agents installed" test -f "$HOME/.copilot/agents/security-reviewer.agent.md"
@@ -76,6 +107,32 @@ verify_installed() {
 }
 
 main() {
+  local profile="prompt"
+  while [[ "$#" -gt 0 ]]; do
+    case "$1" in
+      --profile)
+        if [[ "$#" -lt 2 ]]; then
+          log "ERROR: --profile requires prompt or hardened"
+          exit 1
+        fi
+        profile="$2"
+        shift 2
+        ;;
+      *)
+        log "ERROR: unknown option: $1"
+        log "Usage: ./install.sh [--profile prompt|hardened]"
+        exit 1
+        ;;
+    esac
+  done
+
+  if [[ "$profile" != prompt && "$profile" != hardened ]]; then
+    log "ERROR: invalid profile: $profile"
+    log "Usage: ./install.sh [--profile prompt|hardened]"
+    exit 1
+  fi
+
+  log "=== Selected install profile: $profile ==="
   log "=== Preflight checks ==="
   need_command git
   need_command node
@@ -83,13 +140,17 @@ main() {
   need_command mktemp
 
   npm ci --ignore-scripts --no-audit --no-fund
-  node "$SCRIPT_DIR/scripts/generate.js" --check
-  node "$SCRIPT_DIR/scripts/doctor.js"
+  node "$SCRIPT_DIR/scripts/generate.js" --profile "$profile" --check
+  if [[ "$profile" == hardened ]]; then
+    node "$SCRIPT_DIR/scripts/doctor.js"
+  else
+    log "Skipping runtime compatibility doctor for prompt profile"
+  fi
 
   local generated_dir
   generated_dir="$(mktemp -d)"
   trap 'rm -rf "${generated_dir:-}"' EXIT
-  node "$SCRIPT_DIR/scripts/generate.js" --out "$generated_dir"
+  node "$SCRIPT_DIR/scripts/generate.js" --profile "$profile" --out "$generated_dir"
 
   log ""
   log "=== Installing ai-agent-contract ==="
@@ -97,9 +158,14 @@ main() {
     --repo-root "$SCRIPT_DIR" \
     --generated-root "$generated_dir" \
     --home "$HOME" \
-    --shell-rc "$(shell_rc_path)"
+    --shell-rc "$(shell_rc_path)" \
+    --profile "$profile"
 
-  verify_installed
+  if [[ "$profile" == prompt ]]; then
+    verify_prompt_installed
+  else
+    verify_installed
+  fi
 
   log ""
   log "=== Done. Configuration is installed and verified. ==="

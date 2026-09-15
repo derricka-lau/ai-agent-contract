@@ -47,7 +47,7 @@ function snapshotTree(treeRoot) {
   return snapshot;
 }
 
-function runManagedInstall({ generatedRoot, home, shellRc, env }) {
+function runManagedInstall({ generatedRoot, home, shellRc, env, profile = 'hardened' }) {
   return execFileSync(process.execPath, [
     helper,
     'install',
@@ -55,6 +55,7 @@ function runManagedInstall({ generatedRoot, home, shellRc, env }) {
     '--generated-root', generatedRoot,
     '--home', home,
     '--shell-rc', shellRc,
+    '--profile', profile,
   ], {
     cwd: root,
     env,
@@ -89,6 +90,126 @@ function gitConfigValues(env) {
     throw error;
   }
 }
+
+test('prompt profile installs instructions without runtime enforcement', (t) => {
+  const testRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ai-agent-contract-test-'));
+  t.after(() => fs.rmSync(testRoot, { recursive: true, force: true }));
+
+  const generatedRoot = path.join(testRoot, 'generated');
+  const home = path.join(testRoot, 'home');
+  const shellRc = path.join(home, '.bashrc');
+  const globalGit = path.join(testRoot, 'global.gitconfig');
+  const env = {
+    ...process.env,
+    GIT_CONFIG_GLOBAL: globalGit,
+    HOME: home,
+    XDG_CONFIG_HOME: path.join(home, '.config'),
+  };
+
+  execFileSync(process.execPath, ['scripts/generate.js', '--out', generatedRoot], {
+    cwd: root,
+    stdio: 'pipe',
+  });
+  fs.mkdirSync(path.dirname(shellRc), { recursive: true });
+  fs.writeFileSync(shellRc, '# User shell configuration.\n');
+
+  runManagedInstall({ generatedRoot, home, shellRc, env, profile: 'prompt' });
+
+  for (const file of [
+    '.claude/CLAUDE.md',
+    '.codex/AGENTS.md',
+    '.copilot/instructions/global-contract.instructions.md',
+  ]) {
+    assert.ok(fs.existsSync(path.join(home, file)), `missing installed prompt file: ${file}`);
+  }
+  for (const file of [
+    '.claude/settings.json',
+    '.claude/hooks/pre-tool-guard.sh',
+    '.codex/config.toml',
+    '.copilot/hooks/policy.json',
+    '.local/share/ai-agent-contract/guard.js',
+    '.local/bin/codex-safe',
+    '.git-hooks/pre-commit',
+  ]) {
+    assert.equal(fs.existsSync(path.join(home, file)), false, `unexpected runtime file: ${file}`);
+  }
+  assert.equal(fs.readFileSync(shellRc, 'utf8'), '# User shell configuration.\n');
+  assert.deepEqual(gitConfigValues(env), []);
+});
+
+test('switching from hardened to prompt restores owned runtime values', (t) => {
+  const testRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ai-agent-contract-test-'));
+  t.after(() => fs.rmSync(testRoot, { recursive: true, force: true }));
+
+  const hardenedRoot = path.join(testRoot, 'hardened');
+  const promptRoot = path.join(testRoot, 'prompt');
+  const home = path.join(testRoot, 'home');
+  const shellRc = path.join(home, '.bashrc');
+  const globalGit = path.join(testRoot, 'global.gitconfig');
+  const env = {
+    ...process.env,
+    GIT_CONFIG_GLOBAL: globalGit,
+    HOME: home,
+    XDG_CONFIG_HOME: path.join(home, '.config'),
+  };
+
+  execFileSync(process.execPath, [
+    'scripts/generate.js', '--profile', 'hardened', '--out', hardenedRoot,
+  ], { cwd: root, stdio: 'pipe' });
+  execFileSync(process.execPath, ['scripts/generate.js', '--out', promptRoot], {
+    cwd: root,
+    stdio: 'pipe',
+  });
+  fs.mkdirSync(path.dirname(shellRc), { recursive: true });
+  fs.writeFileSync(shellRc, '# User shell configuration.\n');
+
+  runManagedInstall({ generatedRoot: hardenedRoot, home, shellRc, env, profile: 'hardened' });
+  assert.ok(fs.existsSync(path.join(home, '.codex', 'config.toml')));
+  assert.deepEqual(gitConfigValues(env), [path.join(home, '.git-hooks')]);
+
+  runManagedInstall({ generatedRoot: promptRoot, home, shellRc, env, profile: 'prompt' });
+
+  assert.ok(fs.existsSync(path.join(home, '.codex', 'AGENTS.md')));
+  assert.equal(fs.existsSync(path.join(home, '.codex', 'config.toml')), false);
+  assert.equal(fs.existsSync(path.join(home, '.local', 'bin', 'codex-safe')), false);
+  assert.equal(fs.existsSync(path.join(home, '.git-hooks', 'pre-commit')), false);
+  assert.equal(fs.readFileSync(shellRc, 'utf8'), '# User shell configuration.\n');
+  assert.deepEqual(gitConfigValues(env), []);
+});
+
+test('switching from prompt to hardened preserves an existing Git setting', (t) => {
+  const testRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ai-agent-contract-test-'));
+  t.after(() => fs.rmSync(testRoot, { recursive: true, force: true }));
+
+  const hardenedRoot = path.join(testRoot, 'hardened');
+  const promptRoot = path.join(testRoot, 'prompt');
+  const home = path.join(testRoot, 'home');
+  const shellRc = path.join(home, '.bashrc');
+  const globalGit = path.join(testRoot, 'global.gitconfig');
+  const env = {
+    ...process.env,
+    GIT_CONFIG_GLOBAL: globalGit,
+    HOME: home,
+    XDG_CONFIG_HOME: path.join(home, '.config'),
+  };
+
+  execFileSync(process.execPath, [
+    'scripts/generate.js', '--profile', 'hardened', '--out', hardenedRoot,
+  ], { cwd: root, stdio: 'pipe' });
+  execFileSync(process.execPath, ['scripts/generate.js', '--out', promptRoot], {
+    cwd: root,
+    stdio: 'pipe',
+  });
+  fs.mkdirSync(path.dirname(shellRc), { recursive: true });
+  fs.writeFileSync(shellRc, '');
+  execFileSync('git', ['config', '--global', 'core.hooksPath', '/user/hooks'], { env });
+
+  runManagedInstall({ generatedRoot: promptRoot, home, shellRc, env, profile: 'prompt' });
+  runManagedInstall({ generatedRoot: hardenedRoot, home, shellRc, env, profile: 'hardened' });
+  runManagedUninstall({ home, shellRc, env });
+
+  assert.deepEqual(gitConfigValues(env), ['/user/hooks']);
+});
 
 test('managed source rejects symbolic links', (t) => {
   const testRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ai-agent-contract-test-'));
@@ -173,7 +294,9 @@ test('update aborts before mutation when a managed file was modified', (t) => {
     XDG_CONFIG_HOME: path.join(home, '.config'),
   };
 
-  execFileSync(process.execPath, ['scripts/generate.js', '--out', generatedRoot], {
+  execFileSync(process.execPath, [
+    'scripts/generate.js', '--profile', 'hardened', '--out', generatedRoot,
+  ], {
     cwd: root,
     stdio: 'pipe',
   });
@@ -222,7 +345,9 @@ test('install and uninstall restore only values owned by the ledger', (t) => {
     XDG_CONFIG_HOME: path.join(home, '.config'),
   };
 
-  execFileSync(process.execPath, ['scripts/generate.js', '--out', generatedRoot], {
+  execFileSync(process.execPath, [
+    'scripts/generate.js', '--profile', 'hardened', '--out', generatedRoot,
+  ], {
     cwd: root,
     stdio: 'pipe',
   });
@@ -284,7 +409,9 @@ test('update removes a stale owned file without touching unrelated files', (t) =
     XDG_CONFIG_HOME: path.join(home, '.config'),
   };
 
-  execFileSync(process.execPath, ['scripts/generate.js', '--out', generatedRoot], {
+  execFileSync(process.execPath, [
+    'scripts/generate.js', '--profile', 'hardened', '--out', generatedRoot,
+  ], {
     cwd: root,
     stdio: 'pipe',
   });
@@ -315,7 +442,9 @@ test('a corrupt ledger blocks install without changing the selected home', (t) =
     XDG_CONFIG_HOME: path.join(home, '.config'),
   };
 
-  execFileSync(process.execPath, ['scripts/generate.js', '--out', generatedRoot], {
+  execFileSync(process.execPath, [
+    'scripts/generate.js', '--profile', 'hardened', '--out', generatedRoot,
+  ], {
     cwd: root,
     stdio: 'pipe',
   });
@@ -350,7 +479,9 @@ test('uninstall preserves a user-modified managed file', (t) => {
     XDG_CONFIG_HOME: path.join(home, '.config'),
   };
 
-  execFileSync(process.execPath, ['scripts/generate.js', '--out', generatedRoot], {
+  execFileSync(process.execPath, [
+    'scripts/generate.js', '--profile', 'hardened', '--out', generatedRoot,
+  ], {
     cwd: root,
     stdio: 'pipe',
   });
@@ -375,7 +506,9 @@ test('a mid-transaction file failure rolls back earlier writes', (t) => {
   const failureTarget = path.join(home, '.copilot', 'hooks', 'pre-tool-guard.sh');
   const originalGitConfigGlobal = process.env.GIT_CONFIG_GLOBAL;
 
-  execFileSync(process.execPath, ['scripts/generate.js', '--out', generatedRoot], {
+  execFileSync(process.execPath, [
+    'scripts/generate.js', '--profile', 'hardened', '--out', generatedRoot,
+  ], {
     cwd: root,
     stdio: 'pipe',
   });

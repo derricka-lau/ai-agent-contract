@@ -129,14 +129,23 @@ const claudeEditPattern = ['Edit(**/', blockedAppLocal, ')'].join('');
 const codexProjectRootEnvEntry = ['"', blockedEnv, '" = "none"'].join('');
 const codexProjectRootAppEntry = ['"', blockedAppLocal, '" = "none"'].join('');
 
-const generate = command('node', ['scripts/generate.js', '--out', generatedRoot]);
+const generate = command('node', [
+  'scripts/generate.js',
+  '--profile', 'hardened',
+  '--out', generatedRoot,
+]);
 if (generate.status === 0) {
   ok('generated files render to a disposable directory');
 } else {
   fail(generate.stderr.trim() || generate.stdout.trim());
 }
 
-const generatedCheck = command('node', ['scripts/generate.js', '--out', generatedRoot, '--check']);
+const generatedCheck = command('node', [
+  'scripts/generate.js',
+  '--profile', 'hardened',
+  '--out', generatedRoot,
+  '--check',
+]);
 if (generatedCheck.status === 0) {
   ok('generated files match canonical sources');
 } else {
@@ -313,13 +322,12 @@ if (parseGeneratedJson('claude/settings.json').autoMemoryEnabled === undefined) 
   fail('compatible Claude settings still set autoMemoryEnabled');
 }
 requireGeneratedContent('codex/config.toml', 'approval_policy = "on-request"');
-requireGeneratedContent('codex/config.toml', 'default_permissions = "contract-workspace"');
-requireGeneratedContent('codex/config.toml', '[permissions.contract-workspace.filesystem]');
-requireGeneratedContent('codex/config.toml', '"**/.env" = "deny"');
-requireGeneratedContent('codex/config.toml', '[permissions.contract-workspace.network]');
-requireGeneratedContent('codex/config.toml', 'enabled = false');
+forbidGeneratedContent('codex/config.toml', 'default_permissions');
+forbidGeneratedContent('codex/config.toml', '[permissions.');
 forbidGeneratedContent('codex/config.toml', 'sandbox_mode =');
-forbidGeneratedContent('codex/config.toml', '[sandbox_workspace_write]');
+forbidGeneratedContent('codex/config.toml', 'sandbox_workspace_write');
+forbidGeneratedContent('codex/agents/explorer.toml', 'default_permissions');
+forbidGeneratedContent('codex/agents/explorer.toml', 'sandbox_mode');
 forbidGeneratedContent('codex/config.toml', '[profiles.');
 for (const [name, settings] of Object.entries(runtimeProfiles.profiles)) {
   const relativePath = `codex/${name}.config.toml`;

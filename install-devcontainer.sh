@@ -65,8 +65,25 @@ EOF
 }
 
 main() {
-	install_bubblewrap
-	verify_bubblewrap_sandbox
+	local profile="prompt"
+	if [[ "${1:-}" == "--profile" ]]; then
+		if [[ "$#" -lt 2 ]]; then
+			log "ERROR: --profile requires prompt or hardened"
+			exit 1
+		fi
+		profile="$2"
+	fi
+	if [[ "$profile" != prompt && "$profile" != hardened ]]; then
+		log "ERROR: invalid profile: $profile"
+		exit 1
+	fi
+
+	if [[ "$profile" == hardened ]]; then
+		install_bubblewrap
+		verify_bubblewrap_sandbox
+	else
+		log "Skipping Codex sandbox preflight for prompt profile"
+	fi
 	log "Delegating devcontainer setup to install.sh"
 	bash "$SCRIPT_DIR/install.sh" "$@"
 }

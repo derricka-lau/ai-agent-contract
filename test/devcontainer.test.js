@@ -28,7 +28,10 @@ test('devcontainer installation verifies the Codex sandbox prerequisite', (t) =>
     { mode: 0o755 },
   );
 
-  const result = spawnSync('bash', [path.join(fixtureRoot, 'install-devcontainer.sh')], {
+  const result = spawnSync('bash', [
+    path.join(fixtureRoot, 'install-devcontainer.sh'),
+    '--profile', 'hardened',
+  ], {
     encoding: 'utf8',
     env: { ...process.env, INSTALL_MARKER: installMarker, PATH: `${bin}:${process.env.PATH}` },
   });

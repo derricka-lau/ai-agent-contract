@@ -7,11 +7,54 @@ const test = require('node:test');
 
 const root = path.resolve(__dirname, '..');
 
-test('Codex profiles render as separate config layers', (t) => {
+test('default generation is prompt-only', (t) => {
   const outputRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ai-agent-contract-test-'));
   t.after(() => fs.rmSync(outputRoot, { recursive: true, force: true }));
 
   execFileSync(process.execPath, ['scripts/generate.js', '--out', outputRoot], {
+    cwd: root,
+    stdio: 'pipe',
+  });
+
+  for (const file of [
+    'claude/CLAUDE.md',
+    'claude/prompts/workflow.md',
+    'claude/skills/guide-mode/SKILL.md',
+    'codex/AGENTS.md',
+    'codex/prompts/workflow.md',
+    'codex/skills/guide-mode/SKILL.md',
+    'copilot/instructions/global-contract.instructions.md',
+    'copilot/instructions/frontend.instructions.md',
+    'copilot/prompts/workflow.md',
+    'copilot/skills/guide-mode/SKILL.md',
+  ]) {
+    assert.ok(fs.existsSync(path.join(outputRoot, file)), `missing prompt file: ${file}`);
+  }
+
+  for (const file of [
+    'claude/settings.json',
+    'claude/hooks/pre-tool-guard.sh',
+    'claude/agents/architect.md',
+    'codex/config.toml',
+    'codex/hooks.json',
+    'codex/agents/explorer.toml',
+    'copilot/hooks/policy.json',
+    'copilot/agents/architect.agent.md',
+    'vscode/settings.json',
+  ]) {
+    assert.equal(fs.existsSync(path.join(outputRoot, file)), false, `unexpected runtime file: ${file}`);
+  }
+});
+
+test('hardened generation renders runtime config layers', (t) => {
+  const outputRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ai-agent-contract-test-'));
+  t.after(() => fs.rmSync(outputRoot, { recursive: true, force: true }));
+
+  execFileSync(process.execPath, [
+    'scripts/generate.js',
+    '--profile', 'hardened',
+    '--out', outputRoot,
+  ], {
     cwd: root,
     stdio: 'pipe',
   });
@@ -23,12 +66,12 @@ test('Codex profiles render as separate config layers', (t) => {
     /^\[profiles\./m,
     'base config must not use legacy inline Codex profiles',
   );
-  assert.match(baseConfig, /default_permissions = "contract-workspace"/);
+  assert.doesNotMatch(baseConfig, /^default_permissions\s*=/m);
   assert.match(baseConfig, /^model = "gpt-5\.6"$/m);
   assert.match(baseConfig, /^model_reasoning_effort = "medium"$/m);
-  assert.match(baseConfig, /\[permissions\.contract-workspace\.filesystem\]/);
-  assert.match(baseConfig, /"\*\*\/\.env" = "deny"/);
+  assert.doesNotMatch(baseConfig, /^\[permissions\./m);
   assert.doesNotMatch(baseConfig, /^sandbox_mode =/m);
+  assert.doesNotMatch(baseConfig, /^\[sandbox_workspace_write(?:\]|\.)/m);
   assert.doesNotMatch(baseConfig, /^service_tier =/m);
   assert.match(baseConfig, /^max_threads = 4$/m);
 
@@ -49,7 +92,7 @@ test('Codex profiles render as separate config layers', (t) => {
 
   const agentConfig = fs.readFileSync(path.join(codexRoot, 'agents', 'explorer.toml'), 'utf8');
   assert.doesNotMatch(agentConfig, /^sandbox_mode =/m);
-  assert.match(agentConfig, /default_permissions = "contract-readonly"/);
+  assert.doesNotMatch(agentConfig, /^default_permissions\s*=/m);
 
   const hooks = JSON.parse(fs.readFileSync(path.join(codexRoot, 'hooks.json'), 'utf8'));
   assert.equal(hooks.hooks.PreToolUse[0].matcher, '.*');
