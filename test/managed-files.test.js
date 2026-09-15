@@ -517,6 +517,8 @@ test('a mid-transaction file failure rolls back earlier writes', (t) => {
   const before = snapshotTree(home);
   const originalRename = fs.renameSync;
   process.env.GIT_CONFIG_GLOBAL = path.join(testRoot, 'global.gitconfig');
+  const originalXdgConfigHome = process.env.XDG_CONFIG_HOME;
+  process.env.XDG_CONFIG_HOME = path.join(home, '.config');
   fs.renameSync = (source, target) => {
     if (target === failureTarget) {
       throw new Error('Injected file write failure');
@@ -535,6 +537,11 @@ test('a mid-transaction file failure rolls back earlier writes', (t) => {
       delete process.env.GIT_CONFIG_GLOBAL;
     } else {
       process.env.GIT_CONFIG_GLOBAL = originalGitConfigGlobal;
+    }
+    if (originalXdgConfigHome === undefined) {
+      delete process.env.XDG_CONFIG_HOME;
+    } else {
+      process.env.XDG_CONFIG_HOME = originalXdgConfigHome;
     }
   }
 
