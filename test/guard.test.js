@@ -25,23 +25,23 @@ test('malformed hook input fails closed for each output protocol', () => {
   assert.equal(JSON.parse(copilot.stdout).permissionDecision, 'deny');
   assert.match(copilot.stdout, /invalid local policy hook input/i);
 
-  for (const mode of ['codex-pre-tool', 'codex-pre-command', 'claude-pre-tool']) {
+  for (const mode of ['codex-pre-tool', 'claude-pre-tool']) {
     const result = runGuard(mode, '{');
     assert.equal(result.status, 2);
     assert.match(result.stderr, /invalid local policy hook input/i);
   }
 });
 
-test('dangerous command text is checked only for command tools', () => {
-  const documentation = runGuard('copilot-pre-tool', JSON.stringify({
-    toolName: 'edit',
-    toolArgs: { path: 'docs/safety.md', content: 'Never run git reset --hard.' },
+test('guard blocks protected paths without policing unrelated commands', () => {
+  const protectedPath = runGuard('copilot-pre-tool', JSON.stringify({
+    toolName: 'readFile',
+    toolArgs: { path: '.env.local' },
   }));
-  assert.equal(documentation.stdout, '');
+  assert.equal(JSON.parse(protectedPath.stdout).permissionDecision, 'deny');
 
-  const command = runGuard('copilot-pre-tool', JSON.stringify({
+  const unrelatedCommand = runGuard('copilot-pre-tool', JSON.stringify({
     toolName: 'bash',
     toolArgs: { command: 'git reset --hard HEAD' },
   }));
-  assert.equal(JSON.parse(command.stdout).permissionDecision, 'deny');
+  assert.equal(unrelatedCommand.stdout, '');
 });

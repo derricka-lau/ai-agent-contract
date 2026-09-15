@@ -79,15 +79,9 @@ verify_installed() {
   check "Claude instructions installed" test -f "$HOME/.claude/CLAUDE.md"
   check "Claude deny rules installed" grep -Fq 'Read(**/.env.local)' "$HOME/.claude/settings.json"
   check "Claude deterministic hook installed" test -x "$HOME/.claude/hooks/pre-tool-guard.sh"
-  check "Codex config installed" test -f "$HOME/.codex/config.toml"
-  check "Codex native sandbox defaults preserved" sh -c '! grep -Eq "^(default_permissions|sandbox_mode|sandbox_workspace_write)" "$1" && ! grep -Fq "[permissions." "$1"' _ "$HOME/.codex/config.toml"
+  check "Codex sensitive-file hook installed" test -f "$HOME/.codex/hooks.json"
   check "Shared guard installed" test -x "$HOME/.local/share/ai-agent-contract/guard.js"
-  check "Runtime profile metadata installed" test -f "$HOME/.local/share/ai-agent-contract/runtime-profiles.json"
-  check "Role agents installed" test -f "$HOME/.copilot/agents/security-reviewer.agent.md"
   check "Skills installed" test -f "$HOME/.copilot/skills/php-cakephp/SKILL.md"
-  check "Git hooks installed" test -x "$HOME/.git-hooks/pre-commit"
-  check "copilot-safe wrapper installed" test -x "$HOME/.local/bin/copilot-safe"
-  check "codex-safe wrapper installed" test -x "$HOME/.local/bin/codex-safe"
 
   local hook_output
   hook_output="$(printf '%s' '{"tool_name":"readFile","tool_input":{"path":".env.local"}}' | "$HOME/.copilot/hooks/pre-tool-guard.sh")"
@@ -144,7 +138,7 @@ main() {
   if [[ "$profile" == hardened ]]; then
     node "$SCRIPT_DIR/scripts/doctor.js"
   else
-    log "Skipping runtime compatibility doctor for prompt profile"
+    log "Skipping sensitive-file guard doctor for prompt profile"
   fi
 
   local generated_dir

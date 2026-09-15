@@ -15,8 +15,5 @@ test('install scripts delegate ownership to the managed transaction helper', () 
   assert.doesNotMatch(install, /npm install -g|@latest|backup_existing|write_manifest|cp -a/);
   assert.doesNotMatch(uninstall, /rm -rf|remove_path|--unset core\.hooksPath/);
   assert.doesNotMatch(devcontainer, /ln -s|link_codex_safe/);
-  assert.doesNotMatch(install, /default_permissions = "contract-workspace"/);
-  assert.doesNotMatch(install, /Codex permission profile installed|Codex sensitive-file deny installed/);
-  assert.match(install, /Codex native sandbox defaults preserved/);
-  assert.doesNotMatch(install, /sandbox_mode = "workspace-write"/);
+  assert.match(install, /Codex sensitive-file hook installed/);
 });

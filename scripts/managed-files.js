@@ -21,7 +21,6 @@ const LEDGER_FILE = 'install-state.json';
 const BACKUP_DIRECTORY = 'backups';
 const TRANSACTION_DIRECTORY = 'transaction';
 const HASH_PATTERN = /^[0-9a-f]{64}$/;
-const SHELL_PATH_LINE = 'export PATH="$HOME/.local/bin:$PATH"';
 const GIT_HOOKS_KEY = 'core.hooksPath';
 const INSTALL_PROFILES = new Set(['prompt', 'hardened']);
 
@@ -739,11 +738,6 @@ function buildDesiredFiles(repoRoot, generatedRoot, home, profile = 'hardened') 
     const stateRoot = statePaths(home).stateRoot;
     addFile(path.join(repoRoot, 'scripts', 'guard.js'), repoRoot, path.join(stateRoot, 'guard.js'), 0o755);
     addFile(path.join(repoRoot, 'core', 'guardrails.json'), repoRoot, path.join(stateRoot, 'guardrails.json'));
-    addFile(path.join(repoRoot, 'core', 'runtime-profiles.json'), repoRoot, path.join(stateRoot, 'runtime-profiles.json'));
-    addFile(path.join(repoRoot, 'codex-safe'), repoRoot, path.join(home, '.local', 'bin', 'codex-safe'), 0o755);
-    addFile(path.join(repoRoot, 'copilot-safe'), repoRoot, path.join(home, '.local', 'bin', 'copilot-safe'), 0o755);
-    addFile(path.join(repoRoot, 'hooks', 'pre-commit'), repoRoot, path.join(home, '.git-hooks', 'pre-commit'), 0o755);
-    addFile(path.join(repoRoot, 'hooks', 'pre-push'), repoRoot, path.join(home, '.git-hooks', 'pre-push'), 0o755);
   }
 
   return desired;
@@ -886,14 +880,6 @@ function setGitConfigValues(home, values) {
 
 function linesContain(content, line) {
   return content.split(/\r?\n/).includes(line);
-}
-
-function appendLine(content, line) {
-  if (linesContain(content, line)) {
-    return content;
-  }
-  const separator = content && !content.endsWith('\n') ? '\n' : '';
-  return `${content}${separator}${line}\n`;
 }
 
 function removeLine(content, line) {
@@ -1262,51 +1248,28 @@ function installManaged({ repoRoot, generatedRoot, home, shellRc, profile = 'har
       });
     }
 
-    let installedShell = [];
-    if (profile === 'hardened') {
-      const oldShell = ledger?.shell?.find((record) => record.path === relativeTarget(paths.home, shellTarget));
-      const shellStatus = lstatIfPresent(shellTarget);
-      const shellContent = shellStatus ? fs.readFileSync(shellTarget, 'utf8') : '';
-      const shellAdded = oldShell ? oldShell.added : !linesContain(shellContent, SHELL_PATH_LINE);
-      const nextShellContent = appendLine(shellContent, SHELL_PATH_LINE);
-      if (nextShellContent !== shellContent) {
-        atomicWriteFile(shellTarget, nextShellContent, shellStatus ? fileMode(shellStatus) : 0o644, paths.home);
+    const installedShell = [];
+    for (const record of ledger?.shell || []) {
+      const target = resolveTarget(paths.home, record.path);
+      const status = lstatIfPresent(target);
+      if (!record.added || !status) {
+        continue;
       }
-      installedShell = [{
-        path: relativeTarget(paths.home, shellTarget),
-        line: SHELL_PATH_LINE,
-        added: shellAdded,
-        fileExisted: oldShell ? oldShell.fileExisted : Boolean(shellStatus),
-      }];
-    } else {
-      for (const record of ledger?.shell || []) {
-        const target = resolveTarget(paths.home, record.path);
-        const status = lstatIfPresent(target);
-        if (!record.added || !status) {
-          continue;
-        }
-        const content = fs.readFileSync(target, 'utf8');
-        const restored = removeLine(content, record.line);
-        if (restored === content) {
-          continue;
-        }
-        if (!record.fileExisted && restored === '') {
-          removeManagedFile(target, paths.home);
-        } else {
-          atomicWriteFile(target, restored, fileMode(status), paths.home);
-        }
+      const content = fs.readFileSync(target, 'utf8');
+      const restored = removeLine(content, record.line);
+      if (restored === content) {
+        continue;
+      }
+      if (!record.fileExisted && restored === '') {
+        removeManagedFile(target, paths.home);
+      } else {
+        atomicWriteFile(target, restored, fileMode(status), paths.home);
       }
     }
 
-    const installedGitValues = profile === 'hardened'
-      ? [path.join(paths.home, '.git-hooks')]
-      : [];
-    const previousGitValues = profile === 'hardened'
-      ? (ledger?.git.installedValues?.length ? ledger.git.previousValues : gitBefore)
-      : [];
-    if (profile === 'hardened') {
-      setGitConfigValues(paths.home, installedGitValues);
-    } else if (ledger && isDeepStrictEqual(gitBefore, ledger.git.installedValues)) {
+    const installedGitValues = [];
+    const previousGitValues = [];
+    if (ledger && isDeepStrictEqual(gitBefore, ledger.git.installedValues)) {
       setGitConfigValues(paths.home, ledger.git.previousValues);
     }
 
