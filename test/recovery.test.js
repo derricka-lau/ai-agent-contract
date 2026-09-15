@@ -13,7 +13,7 @@ test('recover restores a journalled file and Git value', (t) => {
   t.after(() => fs.rmSync(testRoot, { recursive: true, force: true }));
 
   const home = path.join(testRoot, 'home');
-  const target = path.join(home, '.codex', 'config.toml');
+  const target = path.join(home, '.codex', 'hooks.json');
   const stateRoot = path.join(home, '.local', 'share', 'ai-agent-contract');
   const transactionRoot = path.join(stateRoot, 'transaction');
   const snapshotRoot = path.join(transactionRoot, 'snapshots');
@@ -28,7 +28,7 @@ test('recover restores a journalled file and Git value', (t) => {
     schemaVersion: 1,
     gitValues: ['/original/hooks'],
     entries: [
-      { path: '.codex/config.toml', kind: 'file', mode: 0o644, snapshot: '0' },
+      { path: '.codex/hooks.json', kind: 'file', mode: 0o644, snapshot: '0' },
     ],
     existingDirectories: ['.codex', '.local', '.local/share', '.local/share/ai-agent-contract'],
   }, null, 2)}\n`);

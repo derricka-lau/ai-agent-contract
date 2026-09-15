@@ -14,14 +14,10 @@ function loadGuardrails() {
     'protectedExtensions',
     'protectedPathFragments',
     'safeExampleBaseNames',
-    'dangerousCommandPatterns',
   ]) {
     if (!Array.isArray(value[key]) || !value[key].every((item) => typeof item === 'string')) {
       throw new Error(`guardrails field ${key} must be an array of strings`);
     }
-  }
-  for (const pattern of value.dangerousCommandPatterns) {
-    new RegExp(pattern, 'i');
   }
   return value;
 }
@@ -59,30 +55,6 @@ function toolArguments(payload) {
     || payload.tool_args
     || payload.toolArgs
     || {};
-}
-
-function commandFromPayload(payload) {
-  const args = toolArguments(payload);
-  if (args && typeof args === 'object' && !Array.isArray(args)) {
-    if (typeof args.command === 'string') {
-      return args.command;
-    }
-    if (Array.isArray(args.commands)) {
-      return args.commands.join(' && ');
-    }
-    if (typeof args.commands === 'string') {
-      return args.commands;
-    }
-    return '';
-  }
-  if (typeof args === 'string' && args.length > 0) {
-    try {
-      return commandFromPayload({ toolArgs: JSON.parse(args) });
-    } catch {
-      return args;
-    }
-  }
-  return '';
 }
 
 function haystackFromPayload(payload) {
@@ -124,17 +96,6 @@ function evaluatePayload(payload, guardrails) {
     };
   }
 
-  const command = commandFromPayload(payload);
-  const hasDangerousCommand = guardrails.dangerousCommandPatterns
-    .map((pattern) => new RegExp(pattern, 'i'))
-    .some((pattern) => pattern.test(command));
-  if (hasDangerousCommand) {
-    return {
-      blocked: true,
-      reason: 'Blocked dangerous command by local policy hook',
-    };
-  }
-
   return { blocked: false, reason: '' };
 }
 
@@ -173,7 +134,7 @@ function runBlockingPreTool() {
 
 if (mode === 'copilot-pre-tool') {
   runCopilotPreTool();
-} else if (mode === 'codex-pre-tool' || mode === 'codex-pre-command' || mode === 'claude-pre-tool') {
+} else if (mode === 'codex-pre-tool' || mode === 'claude-pre-tool') {
   runBlockingPreTool();
 } else {
   console.error('Usage: guard.js <copilot-pre-tool|codex-pre-tool|claude-pre-tool>');

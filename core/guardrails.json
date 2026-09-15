@@ -30,13 +30,5 @@
     ".env.example",
     ".env.sample",
     ".env.template"
-  ],
-  "dangerousCommandPatterns": [
-    "(^|\\s)rm\\s+-rf\\s+/",
-    "sudo\\s+rm\\s+-rf",
-    "git\\s+reset\\s+--hard",
-    "git\\s+checkout\\s+--\\s+",
-    "chmod\\s+-R\\s+777\\b",
-    "\\bmkfs\\b"
   ]
 }

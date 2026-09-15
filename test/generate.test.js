@@ -7,6 +7,19 @@ const test = require('node:test');
 
 const root = path.resolve(__dirname, '..');
 
+function outputFiles(outputRoot, relativePath = '') {
+  const files = [];
+  for (const entry of fs.readdirSync(path.join(outputRoot, relativePath), { withFileTypes: true })) {
+    const name = path.join(relativePath, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...outputFiles(outputRoot, name));
+    } else {
+      files.push(name.split(path.sep).join('/'));
+    }
+  }
+  return files.sort();
+}
+
 test('default generation is prompt-only', (t) => {
   const outputRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ai-agent-contract-test-'));
   t.after(() => fs.rmSync(outputRoot, { recursive: true, force: true }));
@@ -34,102 +47,65 @@ test('default generation is prompt-only', (t) => {
   for (const file of [
     'claude/settings.json',
     'claude/hooks/pre-tool-guard.sh',
-    'claude/agents/architect.md',
     'codex/config.toml',
     'codex/hooks.json',
-    'codex/agents/explorer.toml',
     'copilot/hooks/policy.json',
-    'copilot/agents/architect.agent.md',
-    'vscode/settings.json',
   ]) {
     assert.equal(fs.existsSync(path.join(outputRoot, file)), false, `unexpected runtime file: ${file}`);
   }
 });
 
-test('hardened generation renders runtime config layers', (t) => {
+test('hardened generation adds sensitive-file controls without other runtime settings', (t) => {
   const outputRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ai-agent-contract-test-'));
+  const promptRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ai-agent-contract-test-'));
   t.after(() => fs.rmSync(outputRoot, { recursive: true, force: true }));
+  t.after(() => fs.rmSync(promptRoot, { recursive: true, force: true }));
 
   execFileSync(process.execPath, [
-    'scripts/generate.js',
-    '--profile', 'hardened',
-    '--out', outputRoot,
-  ], {
+    'scripts/generate.js', '--profile', 'hardened', '--out', outputRoot,
+  ], { cwd: root, stdio: 'pipe' });
+  execFileSync(process.execPath, ['scripts/generate.js', '--out', promptRoot], {
     cwd: root,
     stdio: 'pipe',
   });
 
-  const codexRoot = path.join(outputRoot, 'codex');
-  const baseConfig = fs.readFileSync(path.join(codexRoot, 'config.toml'), 'utf8');
-  assert.doesNotMatch(
-    baseConfig,
-    /^\[profiles\./m,
-    'base config must not use legacy inline Codex profiles',
-  );
-  assert.doesNotMatch(baseConfig, /^default_permissions\s*=/m);
-  assert.match(baseConfig, /^model = "gpt-5\.6"$/m);
-  assert.match(baseConfig, /^model_reasoning_effort = "medium"$/m);
-  assert.doesNotMatch(baseConfig, /^\[permissions\./m);
-  assert.doesNotMatch(baseConfig, /^sandbox_mode =/m);
-  assert.doesNotMatch(baseConfig, /^\[sandbox_workspace_write(?:\]|\.)/m);
-  assert.doesNotMatch(baseConfig, /^service_tier =/m);
-  assert.match(baseConfig, /^max_threads = 4$/m);
+  const promptFiles = outputFiles(promptRoot);
+  const hardenedFiles = outputFiles(outputRoot);
+  for (const file of promptFiles) {
+    assert.ok(hardenedFiles.includes(file), `missing prompt file in hardened output: ${file}`);
+  }
+  assert.deepEqual(hardenedFiles.filter((file) => !promptFiles.includes(file)), [
+    'claude/hooks/pre-tool-guard.sh',
+    'claude/settings.json',
+    'codex/hooks.json',
+    'codex/hooks/pre-tool-guard.sh',
+    'copilot/hooks/policy.json',
+    'copilot/hooks/pre-tool-guard.sh',
+  ]);
 
-  for (const profile of ['secure-global', 'deep', 'quick', 'verify']) {
-    assert.ok(
-      fs.existsSync(path.join(codexRoot, `${profile}.config.toml`)),
-      `missing generated Codex profile: ${profile}.config.toml`,
-    );
+  for (const file of [
+    'claude/CLAUDE.md',
+    'claude/settings.json',
+    'claude/hooks/pre-tool-guard.sh',
+    'codex/AGENTS.md',
+    'codex/hooks.json',
+    'codex/hooks/pre-tool-guard.sh',
+    'copilot/instructions/global-contract.instructions.md',
+    'copilot/hooks/policy.json',
+    'copilot/hooks/pre-tool-guard.sh',
+  ]) {
+    assert.ok(fs.existsSync(path.join(outputRoot, file)), `missing prompt or guard: ${file}`);
   }
 
-  const quickProfile = fs.readFileSync(path.join(codexRoot, 'quick.config.toml'), 'utf8');
-  assert.match(quickProfile, /^model = "gpt-5\.6-terra"$/m);
-  assert.match(quickProfile, /^model_reasoning_effort = "low"$/m);
-  assert.doesNotMatch(quickProfile, /^service_tier =/m);
+  const claudeSettings = JSON.parse(fs.readFileSync(path.join(outputRoot, 'claude/settings.json'), 'utf8'));
+  assert.deepEqual(Object.keys(claudeSettings).sort(), ['hooks', 'permissions']);
+  assert.deepEqual(Object.keys(claudeSettings.permissions), ['deny']);
 
-  const deepProfile = fs.readFileSync(path.join(codexRoot, 'deep.config.toml'), 'utf8');
-  assert.match(deepProfile, /^approval_policy = "on-request"$/m);
+  const codexHooks = JSON.parse(fs.readFileSync(path.join(outputRoot, 'codex/hooks.json'), 'utf8'));
+  assert.deepEqual(Object.keys(codexHooks), ['hooks']);
 
-  const agentConfig = fs.readFileSync(path.join(codexRoot, 'agents', 'explorer.toml'), 'utf8');
-  assert.doesNotMatch(agentConfig, /^sandbox_mode =/m);
-  assert.doesNotMatch(agentConfig, /^default_permissions\s*=/m);
-
-  const hooks = JSON.parse(fs.readFileSync(path.join(codexRoot, 'hooks.json'), 'utf8'));
-  assert.equal(hooks.hooks.PreToolUse[0].matcher, '.*');
-
-  const copilotHooks = JSON.parse(fs.readFileSync(
-    path.join(outputRoot, 'copilot', 'hooks', 'policy.json'),
-    'utf8',
-  ));
-  assert.equal(copilotHooks.hooks.preToolUse[0].type, 'command');
-  assert.equal(
-    copilotHooks.hooks.preToolUse[0].bash,
-    '$HOME/.copilot/hooks/pre-tool-guard.sh',
-  );
-  assert.equal(copilotHooks.hooks.preToolUse[0].timeoutSec, 15);
-  assert.equal(copilotHooks.hooks.PreToolUse, undefined);
-
-  const claudeSettings = JSON.parse(fs.readFileSync(
-    path.join(outputRoot, 'claude', 'settings.json'),
-    'utf8',
-  ));
-  assert.equal(claudeSettings.hooks.PreToolUse[0].matcher, '.*');
-  assert.equal(
-    claudeSettings.hooks.PreToolUse[0].hooks[0].command,
-    '$HOME/.claude/hooks/pre-tool-guard.sh',
-  );
-  assert.equal(claudeSettings.hooks.Notification, undefined);
-  assert.equal(claudeSettings.alwaysThinkingEnabled, undefined);
-  assert.equal(claudeSettings.effortLevel, undefined);
-  assert.equal(fs.existsSync(path.join(outputRoot, 'claude', 'managed-settings.json')), false);
-  assert.doesNotMatch(baseConfig, /^notify =/m);
-
-  const claudeAgent = fs.readFileSync(
-    path.join(outputRoot, 'claude', 'agents', 'architect.md'),
-    'utf8',
-  );
-  assert.doesNotMatch(claudeAgent, /^model:/m);
-  assert.doesNotMatch(claudeAgent, /^effort:/m);
+  const copilotHooks = JSON.parse(fs.readFileSync(path.join(outputRoot, 'copilot/hooks/policy.json'), 'utf8'));
+  assert.deepEqual(Object.keys(copilotHooks).sort(), ['hooks', 'version']);
 });
 
 test('generated contracts include quality, cost, precedence, and ownership rules', (t) => {

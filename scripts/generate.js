@@ -39,7 +39,7 @@ function write(relativePath, content, mode, targetRoot) {
 function generatedHeader(comment = 'md') {
   const text = 'GENERATED FILE. Edit core/* and run: node scripts/generate.js --out <directory>';
 
-  if (comment === 'toml' || comment === 'sh') {
+  if (comment === 'sh') {
     return `# ${text}\n`;
   }
 
@@ -79,139 +79,6 @@ function toolContract(title, guardrails) {
     sensitiveFilePolicy(guardrails),
     read('core/user-context.md'),
   ]);
-}
-
-function frontmatter(values) {
-  const lines = ['---'];
-  for (const [key, value] of Object.entries(values)) {
-    if (Array.isArray(value)) {
-      lines.push(`${key}: ${JSON.stringify(value)}`);
-    } else {
-      lines.push(`${key}: ${value}`);
-    }
-  }
-  lines.push('---');
-
-  return lines.join('\n');
-}
-
-function yamlHandoffs(handoffs = []) {
-  if (handoffs.length === 0) {
-    return '';
-  }
-
-  const lines = ['handoffs:'];
-  for (const handoff of handoffs) {
-    lines.push(`  - label: ${handoff.label}`);
-    lines.push(`    agent: ${handoff.agent}`);
-    lines.push(`    prompt: ${handoff.prompt}`);
-    lines.push('    send: false');
-  }
-
-  return `${lines.join('\n')}\n`;
-}
-
-function claudeAgent(role) {
-  const disallowed = ['Write', 'Edit', 'MultiEdit', 'NotebookEdit'];
-  if (!role.claudeTools.includes('Bash')) {
-    disallowed.push('Bash');
-  }
-
-  const front = [
-    '---',
-    `name: ${role.id}`,
-    `description: ${role.description}`,
-    `tools: ${role.claudeTools}`,
-    `maxTurns: ${role.readOnly ? 20 : 30}`,
-  ];
-
-  if (role.readOnly) {
-    front.push(`disallowedTools: ${disallowed.join(', ')}`);
-  }
-
-  front.push('---');
-
-  return `${front.join('\n')}\n\n${generatedHeader('md')}\n${role.body.trim()}\n`;
-}
-
-function copilotAgent(role) {
-  const lines = [
-    '---',
-    `name: ${role.id}`,
-    `description: ${role.description}`,
-    `tools: ${JSON.stringify(role.copilotTools)}`,
-  ];
-
-  const handoffs = yamlHandoffs(role.handoffs);
-  if (handoffs) {
-    lines.push(handoffs.trimEnd());
-  }
-
-  lines.push('---');
-
-  return `${lines.join('\n')}\n\n${generatedHeader('md')}\n${role.body.trim()}\n`;
-}
-
-function tomlString(value) {
-  return `"""\n${value.trim()}\n"""`;
-}
-
-function tomlLiteral(value) {
-  if (typeof value === 'string') {
-    return JSON.stringify(value);
-  }
-
-  if (typeof value === 'boolean' || typeof value === 'number') {
-    return String(value);
-  }
-
-  if (Array.isArray(value)) {
-    return `[${value.map(tomlLiteral).join(', ')}]`;
-  }
-
-  throw new Error(`Unsupported TOML profile value: ${JSON.stringify(value)}`);
-}
-
-function validateRuntimeProfiles(runtimeProfiles) {
-  if (!runtimeProfiles || typeof runtimeProfiles !== 'object' || Array.isArray(runtimeProfiles)) {
-    throw new Error('core/runtime-profiles.json must contain an object');
-  }
-
-  const profiles = runtimeProfiles.profiles;
-  if (!profiles || typeof profiles !== 'object' || Array.isArray(profiles)) {
-    throw new Error('core/runtime-profiles.json must define a profiles object');
-  }
-
-  if (!Object.hasOwn(profiles, runtimeProfiles.defaultProfile)) {
-    throw new Error('core/runtime-profiles.json defaultProfile must name a defined profile');
-  }
-
-  for (const [name, settings] of Object.entries(profiles)) {
-    if (!/^[A-Za-z0-9_-]+$/.test(name)) {
-      throw new Error(`Invalid Codex profile name: ${name}`);
-    }
-    if (!settings || typeof settings !== 'object' || Array.isArray(settings)) {
-      throw new Error(`Codex profile ${name} must contain a settings object`);
-    }
-  }
-}
-
-function codexProfileConfig(settings) {
-  const values = Object.entries(settings)
-    .map(([key, value]) => `${key} = ${tomlLiteral(value)}`)
-    .join('\n');
-
-  return `${generatedHeader('toml')}${values}\n`;
-}
-
-function codexAgent(role) {
-  return [
-    generatedHeader('toml').trimEnd(),
-    `name = "${role.codexName}"`,
-    `description = "${role.description}"`,
-    `developer_instructions = ${tomlString(role.body)}`,
-    '',
-  ].join('\n');
 }
 
 function copilotInstruction(id, instruction) {
@@ -275,14 +142,7 @@ function claudeSettings(guardrails) {
   }
 
   return `${JSON.stringify({
-    language: 'british english',
-    attribution: { commit: '', pr: '' },
     permissions: {
-      allow: [
-        'Bash(git diff *)',
-        'Bash(git log *)',
-        'Bash(git status)',
-      ],
       deny: [
         'Read(~/.ssh/**)',
         ...patterns.map((pattern) => `Read(${pattern})`),
@@ -307,33 +167,6 @@ function claudeSettings(guardrails) {
   }, null, 2)}\n`;
 }
 
-function codexConfig(runtimeProfiles) {
-  const defaultSettings = runtimeProfiles.profiles[runtimeProfiles.defaultProfile];
-  const baseSettings = Object.entries(defaultSettings)
-    .map(([key, value]) => `${key} = ${tomlLiteral(value)}`)
-    .join('\n');
-
-  return `${generatedHeader('toml')}${baseSettings}
-
-[features]
-hooks = true
-multi_agent = true
-shell_snapshot = true
-
-[tui]
-notifications = true
-animations = true
-
-[history]
-persistence = "save-all"
-
-[agents]
-max_threads = 4
-max_depth = 1
-job_max_runtime_seconds = 1800
-`;
-}
-
 function hookWrapper(kind) {
   return `#!/usr/bin/env bash
 ${generatedHeader('sh').trimEnd()}
@@ -345,10 +178,7 @@ node "$HOME/.local/share/ai-agent-contract/guard.js" ${kind}
 
 function generateFiles(selectedProfile = 'prompt') {
   const guardrails = readJson('core/guardrails.json');
-  const runtimeProfiles = readJson('core/runtime-profiles.json');
-  const roles = readJson('core/roles.json').roles;
   const areaInstructions = readJson('core/area-instructions.json');
-  validateRuntimeProfiles(runtimeProfiles);
   const contract = toolContract('Global Contract', guardrails);
 
   const files = new Map();
@@ -372,13 +202,8 @@ function generateFiles(selectedProfile = 'prompt') {
   }
 
   if (selectedProfile === 'hardened') {
-    files.set('vscode/settings.json', `${JSON.stringify(readJson('core/vscode-settings.json'), null, 2)}\n`);
     files.set('claude/settings.json', claudeSettings(guardrails));
     files.set('claude/hooks/pre-tool-guard.sh', hookWrapper('claude-pre-tool'));
-    files.set('codex/config.toml', codexConfig(runtimeProfiles));
-    for (const [name, settings] of Object.entries(runtimeProfiles.profiles)) {
-      files.set(`codex/${name}.config.toml`, codexProfileConfig(settings));
-    }
     files.set('codex/hooks.json', `${JSON.stringify({
       hooks: {
         PreToolUse: [
@@ -409,11 +234,6 @@ function generateFiles(selectedProfile = 'prompt') {
     }, null, 2)}\n`);
     files.set('copilot/hooks/pre-tool-guard.sh', hookWrapper('copilot-pre-tool'));
 
-    for (const role of roles) {
-      files.set(`claude/agents/${role.id}.md`, claudeAgent(role));
-      files.set(`codex/agents/${role.codexName}.toml`, codexAgent(role));
-      files.set(`copilot/agents/${role.id}.agent.md`, copilotAgent(role));
-    }
   }
 
   const coach = read('core/coach.md');

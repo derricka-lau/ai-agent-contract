@@ -137,7 +137,7 @@ test('prompt profile installs instructions without runtime enforcement', (t) => 
   assert.deepEqual(gitConfigValues(env), []);
 });
 
-test('switching from hardened to prompt restores owned runtime values', (t) => {
+test('switching from hardened to prompt removes only sensitive-file controls', (t) => {
   const testRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ai-agent-contract-test-'));
   t.after(() => fs.rmSync(testRoot, { recursive: true, force: true }));
 
@@ -164,20 +164,19 @@ test('switching from hardened to prompt restores owned runtime values', (t) => {
   fs.writeFileSync(shellRc, '# User shell configuration.\n');
 
   runManagedInstall({ generatedRoot: hardenedRoot, home, shellRc, env, profile: 'hardened' });
-  assert.ok(fs.existsSync(path.join(home, '.codex', 'config.toml')));
-  assert.deepEqual(gitConfigValues(env), [path.join(home, '.git-hooks')]);
+  assert.ok(fs.existsSync(path.join(home, '.codex', 'hooks.json')));
+  assert.deepEqual(gitConfigValues(env), []);
 
   runManagedInstall({ generatedRoot: promptRoot, home, shellRc, env, profile: 'prompt' });
 
   assert.ok(fs.existsSync(path.join(home, '.codex', 'AGENTS.md')));
-  assert.equal(fs.existsSync(path.join(home, '.codex', 'config.toml')), false);
-  assert.equal(fs.existsSync(path.join(home, '.local', 'bin', 'codex-safe')), false);
-  assert.equal(fs.existsSync(path.join(home, '.git-hooks', 'pre-commit')), false);
+  assert.equal(fs.existsSync(path.join(home, '.codex', 'hooks.json')), false);
+  assert.equal(fs.existsSync(path.join(home, '.local', 'share', 'ai-agent-contract', 'guard.js')), false);
   assert.equal(fs.readFileSync(shellRc, 'utf8'), '# User shell configuration.\n');
   assert.deepEqual(gitConfigValues(env), []);
 });
 
-test('switching from prompt to hardened preserves an existing Git setting', (t) => {
+test('hardened install leaves an existing Git setting alone', (t) => {
   const testRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ai-agent-contract-test-'));
   t.after(() => fs.rmSync(testRoot, { recursive: true, force: true }));
 
@@ -206,6 +205,7 @@ test('switching from prompt to hardened preserves an existing Git setting', (t) 
 
   runManagedInstall({ generatedRoot: promptRoot, home, shellRc, env, profile: 'prompt' });
   runManagedInstall({ generatedRoot: hardenedRoot, home, shellRc, env, profile: 'hardened' });
+  assert.deepEqual(gitConfigValues(env), ['/user/hooks']);
   runManagedUninstall({ home, shellRc, env });
 
   assert.deepEqual(gitConfigValues(env), ['/user/hooks']);
@@ -306,13 +306,9 @@ test('update aborts before mutation when a managed file was modified', (t) => {
 
   runManagedInstall({ generatedRoot, home, shellRc, env });
 
-  const modifiedTarget = path.join(home, '.codex', 'config.toml');
+  const modifiedTarget = path.join(home, '.codex', 'hooks.json');
   assert.ok(fs.existsSync(modifiedTarget), 'first install must create the managed target');
-  fs.appendFileSync(modifiedTarget, '\n# User modification.\n');
-  fs.appendFileSync(
-    path.join(generatedRoot, 'codex', 'verify.config.toml'),
-    '\n# Updated generated source.\n',
-  );
+  fs.appendFileSync(modifiedTarget, '\n');
   const beforeUpdate = snapshotTree(home);
 
   assert.throws(
@@ -368,11 +364,12 @@ test('install and uninstall restore only values owned by the ledger', (t) => {
 
   runManagedInstall({ generatedRoot, home, shellRc, env });
 
-  assert.notEqual(fs.readFileSync(existingConfig, 'utf8'), '# Original Codex config.\n');
+  assert.equal(fs.readFileSync(existingConfig, 'utf8'), '# Original Codex config.\n');
+  assert.ok(fs.existsSync(path.join(home, '.codex', 'hooks.json')));
   assert.equal(fs.readFileSync(unrelated, 'utf8'), 'user-owned\n');
-  assert.match(fs.readFileSync(vscodeSettings, 'utf8'), /"chat\.useClaudeMdFile": false/);
-  assert.match(fs.readFileSync(shellRc, 'utf8'), /export PATH="\$HOME\/\.local\/bin:\$PATH"/);
-  assert.deepEqual(gitConfigValues(env), [path.join(home, '.git-hooks')]);
+  assert.match(fs.readFileSync(vscodeSettings, 'utf8'), /"chat\.useClaudeMdFile": true/);
+  assert.equal(fs.readFileSync(shellRc, 'utf8'), '# User shell configuration.\n');
+  assert.deepEqual(gitConfigValues(env), ['/previous/hooks']);
 
   fs.writeFileSync(
     vscodeSettings,
@@ -381,6 +378,7 @@ test('install and uninstall restore only values owned by the ledger', (t) => {
   runManagedUninstall({ home, shellRc, env });
 
   assert.equal(fs.readFileSync(existingConfig, 'utf8'), '# Original Codex config.\n');
+  assert.equal(fs.existsSync(path.join(home, '.codex', 'hooks.json')), false);
   assert.equal(fs.readFileSync(unrelated, 'utf8'), 'user-owned\n');
   assert.match(fs.readFileSync(vscodeSettings, 'utf8'), /\/\/ Keep this comment\./);
   assert.match(fs.readFileSync(vscodeSettings, 'utf8'), /"editor\.fontSize": 16/);
@@ -392,16 +390,20 @@ test('install and uninstall restore only values owned by the ledger', (t) => {
   assert.equal(fs.existsSync(path.join(home, '.local', 'share', 'ai-agent-contract', 'backups')), false);
 });
 
-test('update removes a stale owned file without touching unrelated files', (t) => {
+test('update restores previously owned settings without touching unrelated files', (t) => {
   const testRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ai-agent-contract-test-'));
   t.after(() => fs.rmSync(testRoot, { recursive: true, force: true }));
 
   const generatedRoot = path.join(testRoot, 'generated');
   const home = path.join(testRoot, 'home');
   const shellRc = path.join(home, '.bashrc');
-  const staleSource = path.join(generatedRoot, 'codex', 'verify.config.toml');
-  const staleTarget = path.join(home, '.codex', 'verify.config.toml');
+  const staleSource = path.join(generatedRoot, 'codex', 'config.toml');
+  const staleTarget = path.join(home, '.codex', 'config.toml');
   const unrelated = path.join(home, '.codex', 'user-owned.toml');
+  const vscodeSource = path.join(generatedRoot, 'vscode', 'settings.json');
+  const vscodeTarget = path.join(home, '.config', 'Code', 'User', 'settings.json');
+  const ledgerPath = path.join(home, '.local', 'share', 'ai-agent-contract', 'install-state.json');
+  const shellLine = 'export PATH="$HOME/.local/bin:$PATH"';
   const env = {
     ...process.env,
     GIT_CONFIG_GLOBAL: path.join(testRoot, 'global.gitconfig'),
@@ -416,14 +418,38 @@ test('update removes a stale owned file without touching unrelated files', (t) =
     stdio: 'pipe',
   });
   fs.mkdirSync(home, { recursive: true });
-  fs.writeFileSync(shellRc, '');
+  fs.writeFileSync(shellRc, '# User shell configuration.\n');
+  fs.writeFileSync(staleSource, '# Previously managed Codex setting.\n');
+  fs.mkdirSync(path.dirname(staleTarget), { recursive: true });
+  fs.writeFileSync(staleTarget, '# User Codex setting.\n');
+  fs.mkdirSync(path.dirname(vscodeSource), { recursive: true });
+  fs.writeFileSync(vscodeSource, '{"chat.useClaudeMdFile":false}\n');
+  fs.mkdirSync(path.dirname(vscodeTarget), { recursive: true });
+  fs.writeFileSync(vscodeTarget, '{"chat.useClaudeMdFile":true,"editor.fontSize":15}\n');
+  execFileSync('git', ['config', '--global', 'core.hooksPath', '/previous/hooks'], { env });
   runManagedInstall({ generatedRoot, home, shellRc, env });
+  assert.equal(fs.readFileSync(staleTarget, 'utf8'), '# Previously managed Codex setting.\n');
+  assert.match(fs.readFileSync(vscodeTarget, 'utf8'), /"chat\.useClaudeMdFile":false/);
+
+  fs.appendFileSync(shellRc, `${shellLine}\n`);
+  execFileSync('git', ['config', '--global', 'core.hooksPath', path.join(home, '.git-hooks')], { env });
+  const ledger = JSON.parse(fs.readFileSync(ledgerPath, 'utf8'));
+  ledger.shell = [{ path: '.bashrc', line: shellLine, added: true, fileExisted: true }];
+  ledger.git.installedValues = [path.join(home, '.git-hooks')];
+  ledger.git.previousValues = ['/previous/hooks'];
+  fs.writeFileSync(ledgerPath, `${JSON.stringify(ledger, null, 2)}\n`);
+
   fs.writeFileSync(unrelated, 'user-owned\n');
   fs.unlinkSync(staleSource);
+  fs.unlinkSync(vscodeSource);
 
   runManagedInstall({ generatedRoot, home, shellRc, env });
 
-  assert.equal(fs.existsSync(staleTarget), false);
+  assert.equal(fs.readFileSync(staleTarget, 'utf8'), '# User Codex setting.\n');
+  assert.match(fs.readFileSync(vscodeTarget, 'utf8'), /"chat\.useClaudeMdFile":true/);
+  assert.match(fs.readFileSync(vscodeTarget, 'utf8'), /"editor\.fontSize":15/);
+  assert.equal(fs.readFileSync(shellRc, 'utf8'), '# User shell configuration.\n');
+  assert.deepEqual(gitConfigValues(env), ['/previous/hooks']);
   assert.equal(fs.readFileSync(unrelated, 'utf8'), 'user-owned\n');
 });
 
@@ -471,7 +497,7 @@ test('uninstall preserves a user-modified managed file', (t) => {
   const generatedRoot = path.join(testRoot, 'generated');
   const home = path.join(testRoot, 'home');
   const shellRc = path.join(home, '.bashrc');
-  const target = path.join(home, '.codex', 'config.toml');
+  const target = path.join(home, '.codex', 'hooks.json');
   const env = {
     ...process.env,
     GIT_CONFIG_GLOBAL: path.join(testRoot, 'global.gitconfig'),
@@ -488,11 +514,11 @@ test('uninstall preserves a user-modified managed file', (t) => {
   fs.mkdirSync(home, { recursive: true });
   fs.writeFileSync(shellRc, '');
   runManagedInstall({ generatedRoot, home, shellRc, env });
-  fs.appendFileSync(target, '\n# User modification.\n');
+  fs.appendFileSync(target, '\n');
 
   runManagedUninstall({ home, shellRc, env });
 
-  assert.match(fs.readFileSync(target, 'utf8'), /# User modification\./);
+  assert.ok(fs.readFileSync(target, 'utf8').endsWith('\n\n'));
 });
 
 test('a mid-transaction file failure rolls back earlier writes', (t) => {

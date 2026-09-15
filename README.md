@@ -10,10 +10,9 @@ The repository separates canonical sources from generated and installed outputs:
 
 - `core/global-contract.md` defines shared engineering behaviour.
 - `core/decision-ledger.md` defines normal `D1`/`D2`/`D3` review.
-- `core/guardrails.json` is the single machine-readable source for sensitive paths and dangerous command patterns.
+- `core/guardrails.json` is the single machine-readable source for sensitive paths.
 - `core/sensitive-files.md` explains the policy. Its pattern list is generated from `core/guardrails.json`; the Markdown file is not the enforcement mechanism.
-- `core/runtime-profiles.json` defines Codex runtime profiles and the default profile.
-- `core/roles.json`, `core/area-instructions.json`, `core/coach.md`, `core/user-context.md`, and `core/workflow.md` define their named contract surfaces.
+- `core/area-instructions.json`, `core/coach.md`, `core/user-context.md`, and `core/workflow.md` define their named contract surfaces.
 - `skills/*/SKILL.md` contains canonical shared skills.
 
 Generated runtime files are disposable outputs. Do not edit them by hand. Update the relevant canonical source and regenerate.
@@ -27,7 +26,7 @@ The deterministic enforcement layer is installed only by the `hardened` profile.
 Sensitive-file protection is implemented in code and runtime configuration:
 
 - Copilot CLI runs the shared guard from a user-level `preToolUse` hook using the [current Copilot hook schema](https://docs.github.com/en/copilot/reference/hooks-reference).
-- Codex keeps the platform-native sandbox and permission defaults unset, plus an all-tool `PreToolUse` hook as optional defence in depth. Native Windows sandbox selection remains with Codex and the host or administrator policy.
+- Codex installs only a standalone `hooks.json` and the shared sensitive-file guard. The contract leaves native sandbox, permission, model, approval, and feature settings to Codex and the host or administrator policy. Codex requires trust review before a non-managed hook runs, and some tool paths are outside hook coverage.
 - Claude Code installs native `permissions.deny` rules and an all-tool `PreToolUse` hook backed by the shared guard.
 - Generated instructions also require refusal, but instructions are not treated as the deterministic control.
 
@@ -43,13 +42,11 @@ The shared contract explicitly requires:
 - Material implementation, review, maintenance, CI, runtime, model/API, network, and storage costs to be considered and surfaced.
 - Final documentation to describe the resulting implementation, not a planned transition.
 
-Codex profiles are generated from `core/runtime-profiles.json`. The default does not force Fast mode, because Fast mode consumes extra credits. The `quick` profile is the lower-cost path for lighter work; deeper profiles retain stronger reasoning. Current model and effort selections remain centralised in that JSON file.
-
-Claude agents inherit the active session's model and effort instead of forcing Opus/max. The four web-search skills are explicit opt-in modes, so installing the skill catalogue does not trigger contradictory quick/deep searches on every message.
+The contract does not select models or reasoning effort for any tool. The four web-search skills are explicit opt-in modes, so installing the skill catalogue does not trigger contradictory quick/deep searches on every message.
 
 ## Generated Runtime Targets
 
-Generation is split into two explicit profiles. `prompt` is the default and contains portable instruction, workflow, area-instruction, and coach-skill files. `hardened` adds runtime-specific settings, permission rules, hooks, agents, wrappers, and Git enforcement.
+Generation is split into two explicit profiles. `prompt` is the default and contains portable instructions, workflow prompts, area instructions, and coach skills. `hardened` adds only the tool-specific sensitive-file hooks and Claude deny rules needed to use the shared guard.
 
 Render the current outputs into a disposable directory:
 
@@ -66,7 +63,7 @@ The prompt output contains:
 - Claude, Codex, and Copilot instructions and prompts.
 - Shared area instructions and coach skills.
 
-The hardened output adds the tool-specific configuration and enforcement files, including the VS Code settings fragment used to avoid loading the shared contract twice.
+The hardened output adds sensitive-file controls for each tool. It does not select or configure a sandbox, model, approval policy, feature, agent, editor, or Git setting.
 
 ## Install
 
@@ -78,7 +75,7 @@ cd ~/ai-agent-contract
 ./install.sh
 ```
 
-The installer defaults to the `prompt` profile. Use `./install.sh --profile hardened` when deterministic runtime enforcement is required and the relevant tool versions have been verified.
+The installer defaults to the `prompt` profile. Use `./install.sh --profile hardened` when you want the sensitive-file controls and have verified that your tool versions support the installed hooks. Review and trust the Codex hook when prompted; an untrusted hook is skipped.
 
 The installer intentionally does not install or upgrade Claude Code, Codex, or Copilot CLI. Manage those tools separately using their official installation methods. This avoids unpinned global upgrades and keeps configuration lifecycle separate from executable lifecycle.
 
@@ -90,10 +87,8 @@ The installer intentionally does not install or upgrade Claude Code, Codex, or C
 4. Acquires an atomic operation lock.
 5. Preflights every previously managed value and aborts before mutation if a managed file, field, shell line, or Git value has changed.
 6. Applies exact-file changes through a rollback journal.
-7. Merges only the owned VS Code JSONC fields while preserving comments and unrelated settings.
-8. Adds only the exact `~/.local/bin` shell line when the `hardened` profile is selected.
-9. Sets only Git's global `core.hooksPath` when the `hardened` profile is selected, retaining its previous value for uninstall.
-10. Writes the versioned ownership ledger to `~/.local/share/ai-agent-contract/install-state.json`.
+7. Restores previously owned editor, shell, Git, or tool settings during an update when they still match the ownership ledger.
+8. Writes the versioned ownership ledger to `~/.local/share/ai-agent-contract/install-state.json`.
 
 The installer never copies or deletes whole runtime directories, never overwrites Git identity files, and never writes the legacy timestamp backup or checksum manifest. Previous content for an overwritten managed file is stored by checksum with mode `0600` and pruned when no ledger entry needs it.
 
@@ -146,16 +141,11 @@ Recovery restores the exact pre-transaction file contents, modes, and Git value 
 
 ## VS Code
 
-When desktop VS Code's user settings directory exists, installation merges the fields from `core/vscode-settings.json` into:
-
-- macOS: `~/Library/Application Support/Code/User/settings.json`
-- Linux: `${XDG_CONFIG_HOME:-~/.config}/Code/User/settings.json`
-
-The JSONC-aware merge preserves comments, trailing commas, and unrelated settings. VS Code Insiders, VSCodium, Windows, and remote/container settings are not changed automatically.
+The current installer does not change VS Code settings. If an older installation owned a VS Code setting, an update or uninstall restores that value only when it still matches the ledger; comments and unrelated settings remain intact.
 
 ## Devcontainers
 
-The default prompt profile does not require Bubblewrap or elevated container namespace permissions. The devcontainer installer only runs the Codex sandbox preflight when invoked with `--profile hardened`.
+The contract installer does not install Bubblewrap, change container namespace permissions, or run a Codex sandbox preflight. Codex's own sandbox may still need host support; follow the current [Codex sandbox prerequisites](https://learn.chatgpt.com/docs/sandboxing#prerequisites) if Codex commands fail.
 
 Use this VS Code host setting:
 
@@ -167,23 +157,7 @@ Use this VS Code host setting:
 }
 ```
 
-`install-devcontainer.sh` delegates configuration installation to `install.sh`, installs the distribution `bubblewrap` package when running as root with `apt-get` available, and verifies that Bubblewrap can create the namespaces required by Codex. Installing the package alone is insufficient when the outer container's security policy blocks namespace creation.
-
-If the preflight fails, add the following settings to the project's `devcontainer.json` and rebuild the devcontainer:
-
-```json
-{
-  "runArgs": [
-    "--cap-add=SYS_ADMIN",
-    "--security-opt=seccomp=unconfined",
-    "--security-opt=apparmor=unconfined"
-  ]
-}
-```
-
-These settings relax the outer Docker sandbox so that Codex can construct its own inner Bubblewrap sandbox. Use them only for a trusted development container. The installer does not create an unmanaged `codex` symlink, make Bubblewrap setuid, or replace a failed sandbox with unrestricted execution. Do not use Codex dangerous-access flags as a workaround. If the preflight still fails after rebuilding, follow the current [Codex sandbox prerequisites](https://learn.chatgpt.com/docs/sandboxing#prerequisites) for the host platform.
-
-Use `codex-safe` or `copilot-safe` explicitly when you want the repository's wrapper behaviour.
+`install-devcontainer.sh` delegates configuration installation to `install.sh`. Native Windows sandbox setup is likewise owned by Codex, not by this repository. These Bash installers have not been validated as a native Windows installation path.
 
 ## Coach Modes
 
@@ -199,7 +173,7 @@ Three opt-in modes are generated from the single `core/coach.md` source:
 npm ci --ignore-scripts --no-audit --no-fund
 npm run check
 for file in scripts/*.js; do node --check "$file"; done
-bash -n install.sh install-devcontainer.sh uninstall.sh codex-safe copilot-safe hooks/pre-commit hooks/pre-push
+bash -n install.sh install-devcontainer.sh uninstall.sh
 git diff --check
 npm audit --omit=dev
 ```
