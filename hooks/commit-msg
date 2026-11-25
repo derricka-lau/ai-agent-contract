@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Commit-msg hook: enforces Conventional Commits and blocks any Co-authored-by
+# trailers or AI/tool attribution footers.
+
+if [ "$#" -lt 1 ] || [ ! -f "$1" ]; then
+  echo "ERROR: commit-msg hook requires a readable commit message file." >&2
+  exit 1
+fi
+
+msg_file="$1"
+
+# Strip Git scissor section and comment lines.
+cleaned="$(awk '
+  /^# ------------------------ >8 ------------------------$/ { exit }
+  /^#/ { next }
+  { print }
+' "$msg_file")"
+
+# Reject any Co-authored-by trailer or AI/tool attribution footer anywhere in the message.
+if printf '%s\n' "$cleaned" | grep -Eiq '^[[:space:]]*co-authored-by:[[:space:]]*'; then
+  echo "ERROR: Commit message must not contain a Co-authored-by trailer." >&2
+  exit 1
+fi
+
+if printf '%s\n' "$cleaned" | grep -Eiq '(^[[:space:]]*(generated (with|by)|assisted-by:)|🤖|noreply@anthropic\.com|copilot@github\.com)'; then
+  echo "ERROR: Commit message must not contain AI or tool attribution." >&2
+  exit 1
+fi
+
+# Extract the first non-empty line as the subject.
+subject="$(printf '%s\n' "$cleaned" | awk 'NF { print; exit }')"
+subject="${subject%$'\r'}"
+
+if [ -z "$subject" ]; then
+  echo "ERROR: Commit message subject must not be empty." >&2
+  exit 1
+fi
+
+# Allow Git-generated merge, revert, fixup, squash, and amend subjects.
+if [[ "$subject" =~ ^(Merge\ |Revert\ |(fixup|squash|amend)!\ ) ]]; then
+  exit 0
+fi
+
+if [ "${#subject}" -gt 72 ]; then
+  echo "ERROR: Commit subject exceeds 72 characters (${#subject}): $subject" >&2
+  exit 1
+fi
+
+if [[ "$subject" == *. ]]; then
+  echo "ERROR: Commit subject must not end with a trailing period: $subject" >&2
+  exit 1
+fi
+
+conventional_pattern='^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-z0-9._/-]+\))?!?: [^[:space:]].*$'
+if [[ ! "$subject" =~ $conventional_pattern ]]; then
+  echo "ERROR: Commit subject must follow Conventional Commits (e.g. 'feat(scope): add feature'): $subject" >&2
+  exit 1
+fi
+
+exit 0
