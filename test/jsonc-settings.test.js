@@ -41,3 +41,36 @@ test('JSONC settings preserve comments and restore only managed keys', () => {
   assert.match(restored.content, /"chat\.useClaudeMdFile": true/);
   assert.deepEqual(restored.preservedKeys, []);
 });
+
+test('nested JSONC paths merge and restore without disturbing sibling or user keys', () => {
+  const original = `${JSON.stringify({
+    model: 'opus',
+    permissions: { allow: ['Bash(git status)'] },
+    autoMode: { soft_deny: ['$defaults'] },
+  }, null, 2)}\n`;
+
+  const applied = applyJsoncSettings(
+    original,
+    {
+      permissions: { deny: ['Read(**/.env)'] },
+      hooks: { PreToolUse: [{ matcher: '.*', hooks: [] }] },
+    },
+    { paths: [['permissions', 'deny'], ['hooks', 'PreToolUse']] },
+  );
+
+  const parsed = JSON.parse(applied.content);
+  assert.equal(parsed.model, 'opus');
+  assert.deepEqual(parsed.permissions.allow, ['Bash(git status)']);
+  assert.deepEqual(parsed.permissions.deny, ['Read(**/.env)']);
+  assert.deepEqual(parsed.autoMode, { soft_deny: ['$defaults'] });
+  assert.equal(parsed.hooks.PreToolUse[0].matcher, '.*');
+
+  parsed.theme = 'dark';
+  const restored = restoreJsoncSettings(`${JSON.stringify(parsed, null, 2)}\n`, applied.changes);
+  const restoredParsed = JSON.parse(restored.content);
+  assert.equal(restoredParsed.model, 'opus');
+  assert.equal(restoredParsed.theme, 'dark');
+  assert.deepEqual(restoredParsed.permissions, { allow: ['Bash(git status)'] });
+  assert.equal(restoredParsed.hooks, undefined);
+  assert.deepEqual(restored.preservedKeys, []);
+});

@@ -28,7 +28,7 @@ Sensitive-file protection is implemented in code and runtime configuration:
 
 - Copilot CLI runs the shared guard from a user-level `preToolUse` hook using the [current Copilot hook schema](https://docs.github.com/en/copilot/reference/hooks-reference).
 - Codex installs only a standalone `hooks.json` and the shared sensitive-file guard. The contract leaves native sandbox, permission, model, approval, and feature settings to Codex and the host or administrator policy. Codex requires trust review before a non-managed hook runs, and some tool paths are outside hook coverage.
-- Claude Code installs native `permissions.deny` rules and an all-tool `PreToolUse` hook backed by the shared guard.
+- Claude Code merges native `permissions.deny` rules and an all-tool `PreToolUse` hook backed by the shared guard into `~/.claude/settings.json` without disturbing unrelated user keys.
 - Antigravity installs a native global plugin at `~/.gemini/config/plugins/ai-agent-contract/` with a root `hooks.json` `PreToolUse` hook backed by the shared guard.
 - Generated instructions also require refusal, but instructions are not treated as the deterministic control.
 

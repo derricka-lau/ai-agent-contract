@@ -627,3 +627,51 @@ test('install and uninstall manage Antigravity plugin and optional git commit-ms
   assert.deepEqual(gitConfigValues(env), ['/previous/hooks']);
   assert.equal(fs.readFileSync(unrelatedGemini, 'utf8'), '{"user":true}\n');
 });
+
+test('hardened install merges only deny and PreToolUse into Claude settings while preserving user keys', (t) => {
+  const testRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ai-agent-contract-test-'));
+  t.after(() => fs.rmSync(testRoot, { recursive: true, force: true }));
+
+  const generatedRoot = path.join(testRoot, 'generated');
+  const home = path.join(testRoot, 'home');
+  const shellRc = path.join(home, '.bashrc');
+  const claudeSettings = path.join(home, '.claude', 'settings.json');
+  const env = {
+    ...process.env,
+    GIT_CONFIG_GLOBAL: path.join(testRoot, 'global.gitconfig'),
+    HOME: home,
+    XDG_CONFIG_HOME: path.join(home, '.config'),
+  };
+
+  execFileSync(process.execPath, [
+    'scripts/generate.js', '--profile', 'hardened', '--out', generatedRoot,
+  ], { cwd: root, stdio: 'pipe' });
+  fs.mkdirSync(path.dirname(claudeSettings), { recursive: true });
+  fs.writeFileSync(shellRc, '');
+  fs.writeFileSync(claudeSettings, `${JSON.stringify({
+    model: 'opus',
+    permissions: { allow: ['Bash(git status)'] },
+    autoMode: { soft_deny: ['$defaults'] },
+  }, null, 2)}\n`);
+
+  runManagedInstall({ generatedRoot, home, shellRc, env, profile: 'hardened' });
+
+  const installed = JSON.parse(fs.readFileSync(claudeSettings, 'utf8'));
+  assert.equal(installed.model, 'opus');
+  assert.deepEqual(installed.permissions.allow, ['Bash(git status)']);
+  assert.ok(installed.permissions.deny.includes('Read(**/.env.local)'));
+  assert.equal(installed.hooks.PreToolUse[0].matcher, '.*');
+  assert.deepEqual(installed.autoMode, { soft_deny: ['$defaults'] });
+
+  // Editing an unrelated user key must not block subsequent updates.
+  installed.theme = 'dark';
+  fs.writeFileSync(claudeSettings, `${JSON.stringify(installed, null, 2)}\n`);
+  runManagedInstall({ generatedRoot, home, shellRc, env, profile: 'hardened' });
+
+  runManagedUninstall({ home, shellRc, env });
+  const afterUninstall = JSON.parse(fs.readFileSync(claudeSettings, 'utf8'));
+  assert.equal(afterUninstall.model, 'opus');
+  assert.equal(afterUninstall.theme, 'dark');
+  assert.deepEqual(afterUninstall.permissions, { allow: ['Bash(git status)'] });
+  assert.equal(afterUninstall.hooks, undefined);
+});
