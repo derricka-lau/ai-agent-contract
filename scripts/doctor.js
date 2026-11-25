@@ -60,6 +60,9 @@ for (const file of [
   'codex/hooks/pre-tool-guard.sh',
   'copilot/instructions/global-contract.instructions.md',
   'copilot/hooks/pre-tool-guard.sh',
+  'antigravity/rules/AGENTS.md',
+  'antigravity/hooks/pre-tool-guard.sh',
+  'agents/skills/coach-mode/SKILL.md',
 ]) {
   check(`${file} is generated`, fs.readFileSync(generated(file), 'utf8').includes('GENERATED FILE'));
 }
@@ -78,6 +81,9 @@ for (const file of [
 const claude = json('claude/settings.json');
 const codex = json('codex/hooks.json');
 const copilot = json('copilot/hooks/policy.json');
+const antigravityPlugin = json('antigravity/plugin.json');
+const antigravityHooks = json('antigravity/hooks.json');
+
 check('Claude settings contain only protected-path denials and the guard hook',
   Object.keys(claude).sort().join(',') === 'hooks,permissions'
     && Object.keys(claude.permissions).join(',') === 'deny'
@@ -90,6 +96,11 @@ check('Codex uses a standalone all-tool guard hook',
 check('Copilot uses only the current sensitive-file hook policy',
   Object.keys(copilot).sort().join(',') === 'hooks,version'
     && copilot.hooks?.preToolUse?.[0]?.bash === '$HOME/.copilot/hooks/pre-tool-guard.sh');
+check('Antigravity plugin manifest declares ai-agent-contract',
+  antigravityPlugin.name === 'ai-agent-contract');
+check('Antigravity plugin hooks use PreToolUse with the shared guard',
+  antigravityHooks['ai-agent-contract-guard']?.PreToolUse?.[0]?.matcher === '*'
+    && antigravityHooks['ai-agent-contract-guard'].PreToolUse[0].hooks?.[0]?.command === './hooks/pre-tool-guard.sh');
 
 const policySource = fs.readFileSync(path.join(root, 'core/sensitive-files.md'), 'utf8');
 check('sensitive-file pattern list is generated from guardrails',
@@ -104,6 +115,7 @@ for (const file of [
   'claude/CLAUDE.md',
   'codex/AGENTS.md',
   'copilot/instructions/global-contract.instructions.md',
+  'antigravity/rules/AGENTS.md',
 ]) {
   const contract = fs.readFileSync(generated(file), 'utf8');
   check(`${file} documents every protected path and safe example`,
@@ -116,6 +128,8 @@ const cases = [
   ['Copilot blocks protected paths', 'copilot-pre-tool', { tool_name: 'readFile', tool_input: { path: blocked } }, (result) => result.stdout.includes('"permissionDecision":"deny"')],
   ['Codex blocks protected paths', 'codex-pre-tool', { tool_input: { command: `cat ${blocked}` } }, (result) => result.status === 2],
   ['Claude blocks protected paths', 'claude-pre-tool', { tool_name: 'Read', tool_input: { file_path: blocked } }, (result) => result.status === 2],
+  ['Antigravity blocks protected paths', 'antigravity-pre-tool', { toolCall: { name: 'read_file', args: { Path: blocked } } }, (result) => result.status === 0 && JSON.parse(result.stdout).decision === 'deny'],
+  ['Antigravity allows safe example', 'antigravity-pre-tool', { toolCall: { name: 'read_file', args: { Path: example } } }, (result) => result.status === 0 && JSON.parse(result.stdout).decision === 'allow'],
   ['safe example remains readable', 'copilot-pre-tool', { tool_name: 'readFile', tool_input: { path: example } }, (result) => result.status === 0 && result.stdout === ''],
 ];
 for (const [label, mode, payload, passes] of cases) {

@@ -54,11 +54,12 @@ function toolArguments(payload) {
     || payload.toolInput
     || payload.tool_args
     || payload.toolArgs
+    || payload.toolCall?.args
     || {};
 }
 
 function haystackFromPayload(payload) {
-  const toolName = payload.tool_name || payload.toolName || '';
+  const toolName = payload.tool_name || payload.toolName || payload.toolCall?.name || '';
   return `${toolName} ${collectStrings(toolArguments(payload)).join(' ')}`;
 }
 
@@ -124,6 +125,18 @@ function runCopilotPreTool() {
   }
 }
 
+function runAntigravityPreTool() {
+  const result = evaluateInput(readStdin());
+  if (result.blocked) {
+    process.stdout.write(JSON.stringify({
+      decision: 'deny',
+      reason: result.reason,
+    }));
+    return;
+  }
+  process.stdout.write(JSON.stringify({ decision: 'allow' }));
+}
+
 function runBlockingPreTool() {
   const result = evaluateInput(readStdin());
   if (result.blocked) {
@@ -134,9 +147,11 @@ function runBlockingPreTool() {
 
 if (mode === 'copilot-pre-tool') {
   runCopilotPreTool();
+} else if (mode === 'antigravity-pre-tool') {
+  runAntigravityPreTool();
 } else if (mode === 'codex-pre-tool' || mode === 'claude-pre-tool') {
   runBlockingPreTool();
 } else {
-  console.error('Usage: guard.js <copilot-pre-tool|codex-pre-tool|claude-pre-tool>');
+  console.error('Usage: guard.js <copilot-pre-tool|antigravity-pre-tool|codex-pre-tool|claude-pre-tool>');
   process.exit(64);
 }
