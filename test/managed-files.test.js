@@ -627,3 +627,129 @@ test('install and uninstall manage Antigravity plugin and optional git commit-ms
   assert.deepEqual(gitConfigValues(env), ['/previous/hooks']);
   assert.equal(fs.readFileSync(unrelatedGemini, 'utf8'), '{"user":true}\n');
 });
+
+test('hardened install merges only permissions.deny and hooks.PreToolUse into Claude settings', (t) => {
+  const testRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ai-agent-contract-test-'));
+  t.after(() => fs.rmSync(testRoot, { recursive: true, force: true }));
+
+  const hardenedRoot = path.join(testRoot, 'hardened');
+  const promptRoot = path.join(testRoot, 'prompt');
+  const home = path.join(testRoot, 'home');
+  const shellRc = path.join(home, '.bashrc');
+  const claudeSettings = path.join(home, '.claude', 'settings.json');
+  const env = {
+    ...process.env,
+    GIT_CONFIG_GLOBAL: path.join(testRoot, 'global.gitconfig'),
+    HOME: home,
+    XDG_CONFIG_HOME: path.join(home, '.config'),
+  };
+
+  execFileSync(process.execPath, [
+    'scripts/generate.js', '--profile', 'hardened', '--out', hardenedRoot,
+  ], { cwd: root, stdio: 'pipe' });
+  execFileSync(process.execPath, ['scripts/generate.js', '--out', promptRoot], {
+    cwd: root,
+    stdio: 'pipe',
+  });
+  fs.mkdirSync(path.dirname(claudeSettings), { recursive: true });
+  fs.writeFileSync(shellRc, '');
+  fs.writeFileSync(claudeSettings, `${JSON.stringify({
+    autoMode: true,
+    model: 'claude-opus-5-5',
+    enabledPlugins: { example: true },
+    theme: 'dark',
+    permissions: {
+      allow: ['Bash(git status)'],
+      deny: ['Bash(rm -rf *)'],
+    },
+    hooks: {
+      PostToolUse: [{ matcher: 'Write', hooks: [] }],
+    },
+  }, null, 2)}\n`);
+
+  runManagedInstall({ generatedRoot: hardenedRoot, home, shellRc, env, profile: 'hardened' });
+
+  const installed = JSON.parse(fs.readFileSync(claudeSettings, 'utf8'));
+  const expectedGenerated = JSON.parse(
+    fs.readFileSync(path.join(hardenedRoot, 'claude', 'settings.json'), 'utf8'),
+  );
+  assert.equal(installed.autoMode, true);
+  assert.equal(installed.model, 'claude-opus-5-5');
+  assert.deepEqual(installed.enabledPlugins, { example: true });
+  assert.equal(installed.theme, 'dark');
+  assert.deepEqual(installed.permissions.allow, ['Bash(git status)']);
+  assert.deepEqual(installed.permissions.deny, expectedGenerated.permissions.deny);
+  assert.deepEqual(installed.hooks.PostToolUse, [{ matcher: 'Write', hooks: [] }]);
+  assert.deepEqual(installed.hooks.PreToolUse, expectedGenerated.hooks.PreToolUse);
+
+  // Editing unrelated user keys does not block future updates.
+  installed.theme = 'light';
+  installed.modelSettings = { 'claude-opus-5-5': { effortLevel: 'xhigh' } };
+  fs.writeFileSync(claudeSettings, `${JSON.stringify(installed, null, 2)}\n`);
+
+  runManagedInstall({ generatedRoot: hardenedRoot, home, shellRc, env, profile: 'hardened' });
+  const afterUpdate = JSON.parse(fs.readFileSync(claudeSettings, 'utf8'));
+  assert.equal(afterUpdate.theme, 'light');
+  assert.deepEqual(afterUpdate.modelSettings, { 'claude-opus-5-5': { effortLevel: 'xhigh' } });
+  assert.deepEqual(afterUpdate.permissions.deny, expectedGenerated.permissions.deny);
+
+  // Modifying a managed Claude key blocks update before mutation.
+  const tampered = JSON.parse(fs.readFileSync(claudeSettings, 'utf8'));
+  tampered.permissions.deny = ['Read(custom)'];
+  fs.writeFileSync(claudeSettings, `${JSON.stringify(tampered, null, 2)}\n`);
+  const beforeBlocked = fs.readFileSync(claudeSettings, 'utf8');
+  assert.throws(
+    () => runManagedInstall({ generatedRoot: hardenedRoot, home, shellRc, env, profile: 'hardened' }),
+    (error) => {
+      assert.equal(error.status, 1);
+      assert.match(error.stderr.toString(), /modified managed .*setting/i);
+      return true;
+    },
+  );
+  assert.equal(fs.readFileSync(claudeSettings, 'utf8'), beforeBlocked);
+
+  // Restore managed value, then switching to prompt restores prior deny/hooks and keeps user keys.
+  tampered.permissions.deny = expectedGenerated.permissions.deny;
+  fs.writeFileSync(claudeSettings, `${JSON.stringify(tampered, null, 2)}\n`);
+  runManagedInstall({ generatedRoot: promptRoot, home, shellRc, env, profile: 'prompt' });
+
+  const afterPrompt = JSON.parse(fs.readFileSync(claudeSettings, 'utf8'));
+  assert.equal(afterPrompt.theme, 'light');
+  assert.equal(afterPrompt.autoMode, true);
+  assert.deepEqual(afterPrompt.modelSettings, { 'claude-opus-5-5': { effortLevel: 'xhigh' } });
+  assert.deepEqual(afterPrompt.permissions, {
+    allow: ['Bash(git status)'],
+    deny: ['Bash(rm -rf *)'],
+  });
+  assert.deepEqual(afterPrompt.hooks, {
+    PostToolUse: [{ matcher: 'Write', hooks: [] }],
+  });
+});
+
+test('hardened install creates Claude settings when absent and uninstall removes it cleanly', (t) => {
+  const testRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ai-agent-contract-test-'));
+  t.after(() => fs.rmSync(testRoot, { recursive: true, force: true }));
+
+  const hardenedRoot = path.join(testRoot, 'hardened');
+  const home = path.join(testRoot, 'home');
+  const shellRc = path.join(home, '.bashrc');
+  const claudeSettings = path.join(home, '.claude', 'settings.json');
+  const env = {
+    ...process.env,
+    GIT_CONFIG_GLOBAL: path.join(testRoot, 'global.gitconfig'),
+    HOME: home,
+    XDG_CONFIG_HOME: path.join(home, '.config'),
+  };
+
+  execFileSync(process.execPath, [
+    'scripts/generate.js', '--profile', 'hardened', '--out', hardenedRoot,
+  ], { cwd: root, stdio: 'pipe' });
+  fs.mkdirSync(home, { recursive: true });
+  fs.writeFileSync(shellRc, '');
+
+  runManagedInstall({ generatedRoot: hardenedRoot, home, shellRc, env, profile: 'hardened' });
+  assert.ok(fs.existsSync(claudeSettings));
+
+  runManagedUninstall({ home, shellRc, env });
+  assert.equal(fs.existsSync(claudeSettings), false);
+});

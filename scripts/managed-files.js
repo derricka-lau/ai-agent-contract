@@ -334,6 +334,42 @@ function formattingOptions(content) {
   };
 }
 
+function isPlainObject(value) {
+  return Boolean(value && typeof value === 'object' && !Array.isArray(value));
+}
+
+function validateJsonPath(segments) {
+  return Array.isArray(segments)
+    && segments.length > 0
+    && segments.every((segment) => typeof segment === 'string' && segment.length > 0);
+}
+
+function changePath(change) {
+  return Array.isArray(change.path) ? change.path : [change.key];
+}
+
+function readJsonPath(root, segments) {
+  let parent = root;
+  for (let index = 0; index < segments.length - 1; index += 1) {
+    const segment = segments[index];
+    if (!Object.hasOwn(parent, segment)) {
+      return { exists: false, parentExisted: false };
+    }
+    const next = parent[segment];
+    if (!isPlainObject(next)) {
+      throw new Error(
+        `Managed JSONC setting parent is not an object: ${segments.slice(0, index + 1).join('.')}`,
+      );
+    }
+    parent = next;
+  }
+  const leaf = segments[segments.length - 1];
+  if (!Object.hasOwn(parent, leaf)) {
+    return { exists: false, parentExisted: true };
+  }
+  return { exists: true, parentExisted: true, value: parent[leaf] };
+}
+
 function parseSettings(content) {
   const source = content.trim() ? content : '{}\n';
   const errors = [];
@@ -343,35 +379,61 @@ function parseSettings(content) {
     const details = errors
       .map(({ error, offset }) => `${printParseErrorCode(error)} at offset ${offset}`)
       .join(', ');
-    throw new Error(`Invalid VS Code settings JSONC: ${details}`);
+    throw new Error(`Invalid JSONC settings: ${details}`);
   }
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    throw new Error('Invalid VS Code settings JSONC: root value must be an object');
+  if (!isPlainObject(value)) {
+    throw new Error('Invalid JSONC settings: root value must be an object');
   }
 
   return { source, value };
 }
 
-function applyJsoncSettings(content, settings) {
-  if (!settings || typeof settings !== 'object' || Array.isArray(settings)) {
-    throw new TypeError('VS Code settings fragment must be an object');
+function normalizeJsoncEntries(settings) {
+  if (Array.isArray(settings)) {
+    return settings.map((entry) => {
+      if (!isPlainObject(entry) || !validateJsonPath(entry.path)) {
+        throw new TypeError('JSONC settings path entry must include a non-empty string path');
+      }
+      return {
+        key: entry.path.join('.'),
+        path: [...entry.path],
+        value: entry.value,
+      };
+    });
   }
+  if (!isPlainObject(settings)) {
+    throw new TypeError('JSONC settings fragment must be an object or path entry array');
+  }
+  return Object.entries(settings).map(([key, value]) => ({
+    key,
+    path: null,
+    value,
+  }));
+}
 
+function applyJsoncSettings(content, settings) {
+  const entries = normalizeJsoncEntries(settings);
   let { source, value } = parseSettings(content);
   const changes = [];
 
-  for (const [key, installedValue] of Object.entries(settings)) {
-    const exists = Object.hasOwn(value, key);
-    changes.push({
-      key,
-      installedValue,
-      previous: exists
-        ? { exists: true, value: value[key] }
-        : { exists: false },
-    });
+  for (const entry of entries) {
+    const segments = entry.path ?? [entry.key];
+    const current = readJsonPath(value, segments);
+    const previous = current.exists
+      ? { exists: true, value: current.value }
+      : (entry.path ? { exists: false, parentExisted: current.parentExisted } : { exists: false });
+    const change = {
+      key: entry.key,
+      installedValue: entry.value,
+      previous,
+    };
+    if (entry.path) {
+      change.path = entry.path;
+    }
+    changes.push(change);
     source = applyEdits(
       source,
-      modify(source, [key], installedValue, {
+      modify(source, segments, entry.value, {
         formattingOptions: formattingOptions(source),
       }),
     );
@@ -381,9 +443,31 @@ function applyJsoncSettings(content, settings) {
   return { content: source, changes };
 }
 
+function removeEmptyCreatedParents(source, value, segments) {
+  let nextSource = source;
+  let nextValue = value;
+
+  for (let depth = segments.length - 1; depth >= 1; depth -= 1) {
+    const parentSegments = segments.slice(0, depth);
+    const current = readJsonPath(nextValue, parentSegments);
+    if (!current.exists || !isPlainObject(current.value) || Object.keys(current.value).length > 0) {
+      break;
+    }
+    nextSource = applyEdits(
+      nextSource,
+      modify(nextSource, parentSegments, undefined, {
+        formattingOptions: formattingOptions(nextSource),
+      }),
+    );
+    ({ value: nextValue } = parseSettings(nextSource));
+  }
+
+  return { source: nextSource, value: nextValue };
+}
+
 function restoreJsoncSettings(content, changes) {
   if (!Array.isArray(changes)) {
-    throw new TypeError('VS Code settings changes must be an array');
+    throw new TypeError('JSONC settings changes must be an array');
   }
 
   let { source, value } = parseSettings(content);
@@ -393,15 +477,29 @@ function restoreJsoncSettings(content, changes) {
     if (
       !change
       || typeof change.key !== 'string'
+      || (change.path !== undefined && !validateJsonPath(change.path))
       || !change.previous
       || typeof change.previous.exists !== 'boolean'
+      || (
+        change.previous.parentExisted !== undefined
+        && typeof change.previous.parentExisted !== 'boolean'
+      )
     ) {
-      throw new Error('Invalid VS Code settings ledger entry');
+      throw new Error('Invalid JSONC settings ledger entry');
+    }
+
+    const segments = changePath(change);
+    let current;
+    try {
+      current = readJsonPath(value, segments);
+    } catch {
+      preservedKeys.push(change.key);
+      continue;
     }
 
     if (
-      !Object.hasOwn(value, change.key)
-      || !isDeepStrictEqual(value[change.key], change.installedValue)
+      !current.exists
+      || !isDeepStrictEqual(current.value, change.installedValue)
     ) {
       preservedKeys.push(change.key);
       continue;
@@ -412,11 +510,15 @@ function restoreJsoncSettings(content, changes) {
       : undefined;
     source = applyEdits(
       source,
-      modify(source, [change.key], restoredValue, {
+      modify(source, segments, restoredValue, {
         formattingOptions: formattingOptions(source),
       }),
     );
     ({ value } = parseSettings(source));
+
+    if (!change.previous.exists && change.previous.parentExisted === false && segments.length > 1) {
+      ({ source, value } = removeEmptyCreatedParents(source, value, segments));
+    }
   }
 
   return { content: source, preservedKeys };
@@ -558,6 +660,7 @@ function validateLedger(raw, home) {
     seenTargets.add(record.path);
   }
 
+  const seenJsoncTargets = new Set();
   for (const record of raw.jsonc) {
     if (
       !record
@@ -570,12 +673,21 @@ function validateLedger(raw, home) {
       throw new Error('Invalid JSONC ledger entry');
     }
     resolveTarget(home, record.path);
+    if (seenJsoncTargets.has(record.path)) {
+      throw new Error(`Duplicate JSONC ledger path: ${record.path}`);
+    }
+    seenJsoncTargets.add(record.path);
     for (const change of record.changes) {
       if (
         !change
         || typeof change.key !== 'string'
+        || (change.path !== undefined && !validateJsonPath(change.path))
         || !change.previous
         || typeof change.previous.exists !== 'boolean'
+        || (
+          change.previous.parentExisted !== undefined
+          && typeof change.previous.parentExisted !== 'boolean'
+        )
       ) {
         throw new Error('Invalid JSONC ledger change');
       }
@@ -720,7 +832,15 @@ function buildDesiredFiles(repoRoot, generatedRoot, home, profile = 'hardened', 
   }
 
   for (const runtime of ['claude', 'codex', 'copilot', 'agents']) {
-    addTree(path.join(generatedRoot, runtime), path.join(home, `.${runtime}`));
+    const runtimeSource = path.join(generatedRoot, runtime);
+    const runtimeTarget = path.join(home, `.${runtime}`);
+    for (const source of walkSourceFiles(runtimeSource)) {
+      const relativePath = path.relative(runtimeSource, source);
+      if (runtime === 'claude' && relativePath === 'settings.json') {
+        continue;
+      }
+      addFile(source, runtimeSource, path.join(runtimeTarget, relativePath));
+    }
   }
   addTree(
     path.join(generatedRoot, 'antigravity'),
@@ -915,13 +1035,42 @@ function removeLine(content, line) {
 
 function jsoncManagedValuesAreCurrent(content, changes) {
   const { value } = parseSettings(content);
-  return changes.every((change) => (
-    Object.hasOwn(value, change.key)
-    && isDeepStrictEqual(value[change.key], change.installedValue)
-  ));
+  return changes.every((change) => {
+    try {
+      const current = readJsonPath(value, changePath(change));
+      return current.exists && isDeepStrictEqual(current.value, change.installedValue);
+    } catch {
+      return false;
+    }
+  });
 }
 
-function desiredJsonc(generatedRoot, home) {
+function desiredClaudeSettings(generatedRoot, home) {
+  const source = path.join(generatedRoot, 'claude', 'settings.json');
+  if (!lstatIfPresent(source)) {
+    return null;
+  }
+  validateManagedSource(source, generatedRoot);
+  const settings = JSON.parse(fs.readFileSync(source, 'utf8'));
+  if (
+    !Array.isArray(settings?.permissions?.deny)
+    || !Array.isArray(settings?.hooks?.PreToolUse)
+  ) {
+    throw new Error(`Invalid generated Claude settings: ${source}`);
+  }
+  const target = path.join(home, '.claude', 'settings.json');
+  validateManagedTarget(target, home);
+  return {
+    path: relativeTarget(home, target),
+    settings: [
+      { path: ['permissions', 'deny'], value: settings.permissions.deny },
+      { path: ['hooks', 'PreToolUse'], value: settings.hooks.PreToolUse },
+    ],
+    target,
+  };
+}
+
+function desiredVscodeSettings(generatedRoot, home) {
   const source = path.join(generatedRoot, 'vscode', 'settings.json');
   if (!lstatIfPresent(source)) {
     return null;
@@ -948,7 +1097,16 @@ function desiredJsonc(generatedRoot, home) {
   return { path: relativeTarget(home, target), settings, target };
 }
 
-function assertInstallPreconditions(ledger, desired, paths, shellTarget) {
+function desiredJsonc(generatedRoot, home) {
+  return [
+    desiredClaudeSettings(generatedRoot, home),
+    desiredVscodeSettings(generatedRoot, home),
+  ]
+    .filter(Boolean)
+    .sort((left, right) => left.path.localeCompare(right.path));
+}
+
+function assertInstallPreconditions(ledger, desired, desiredSettingsList, paths, shellTarget) {
   if (!ledger) {
     return;
   }
@@ -971,7 +1129,7 @@ function assertInstallPreconditions(ledger, desired, paths, shellTarget) {
       || !status.isFile()
       || !jsoncManagedValuesAreCurrent(fs.readFileSync(target, 'utf8'), record.changes)
     ) {
-      throw new Error(`Modified managed VS Code setting blocks update: ${target}`);
+      throw new Error(`Modified managed JSONC setting blocks update: ${target}`);
     }
   }
 
@@ -996,6 +1154,9 @@ function assertInstallPreconditions(ledger, desired, paths, shellTarget) {
 
   for (const file of desired.values()) {
     validateManagedTarget(file.target, paths.home);
+  }
+  for (const entry of desiredSettingsList) {
+    validateManagedTarget(entry.target, paths.home);
   }
   validateManagedTarget(shellTarget, paths.home);
 }
@@ -1178,10 +1339,10 @@ function installManaged({ repoRoot, generatedRoot, home, shellRc, profile = 'har
   validateInstallProfile(profile);
   const paths = statePaths(home);
   const desired = buildDesiredFiles(repoRoot, generatedRoot, paths.home, profile, gitHooks);
-  const desiredSettings = desiredJsonc(generatedRoot, paths.home);
+  const desiredSettingsList = desiredJsonc(generatedRoot, paths.home);
   const shellTarget = validateManagedTarget(path.resolve(shellRc), paths.home);
   const ledger = readLedger(paths);
-  assertInstallPreconditions(ledger, desired, paths, shellTarget);
+  assertInstallPreconditions(ledger, desired, desiredSettingsList, paths, shellTarget);
 
   const oldFiles = new Map((ledger?.files || []).map((record) => [record.path, record]));
   const existingBackups = managedBackupFiles(paths);
@@ -1199,10 +1360,8 @@ function installManaged({ repoRoot, generatedRoot, home, shellRc, profile = 'har
     ...[...desired.values()].map((file) => file.target),
     ...(ledger?.files || []).map((record) => resolveTarget(paths.home, record.path)),
     ...(ledger?.jsonc || []).map((record) => resolveTarget(paths.home, record.path)),
+    ...desiredSettingsList.map((entry) => entry.target),
   ];
-  if (desiredSettings) {
-    targets.push(desiredSettings.target);
-  }
 
   const gitBefore = gitConfigValues(paths.home);
   const journal = prepareTransaction(paths, targets, gitBefore);
@@ -1227,9 +1386,13 @@ function installManaged({ repoRoot, generatedRoot, home, shellRc, profile = 'har
       });
     }
 
-    const oldJsonc = ledger?.jsonc?.[0] || null;
+    const oldJsoncByPath = new Map((ledger?.jsonc || []).map((record) => [record.path, record]));
+    const desiredSettingsByPath = new Map(desiredSettingsList.map((entry) => [entry.path, entry]));
     const installedJsonc = [];
-    if (oldJsonc && (!desiredSettings || oldJsonc.path !== desiredSettings.path)) {
+    for (const oldJsonc of ledger?.jsonc || []) {
+      if (desiredSettingsByPath.has(oldJsonc.path)) {
+        continue;
+      }
       const oldTarget = resolveTarget(paths.home, oldJsonc.path);
       const restored = restoreJsoncSettings(fs.readFileSync(oldTarget, 'utf8'), oldJsonc.changes);
       if (!oldJsonc.fileExisted && Object.keys(parseSettings(restored.content).value).length === 0) {
@@ -1238,13 +1401,12 @@ function installManaged({ repoRoot, generatedRoot, home, shellRc, profile = 'har
         atomicWriteFile(oldTarget, restored.content, fileMode(fs.lstatSync(oldTarget)), paths.home);
       }
     }
-    if (desiredSettings) {
+    for (const desiredSettings of desiredSettingsList) {
+      const oldJsonc = oldJsoncByPath.get(desiredSettings.path) || null;
       const targetStatus = lstatIfPresent(desiredSettings.target);
-      const fileExisted = oldJsonc?.path === desiredSettings.path
-        ? oldJsonc.fileExisted
-        : Boolean(targetStatus);
+      const fileExisted = oldJsonc ? oldJsonc.fileExisted : Boolean(targetStatus);
       let base = targetStatus ? fs.readFileSync(desiredSettings.target, 'utf8') : '{}\n';
-      if (oldJsonc?.path === desiredSettings.path) {
+      if (oldJsonc) {
         base = restoreJsoncSettings(base, oldJsonc.changes).content;
       }
       const applied = applyJsoncSettings(base, desiredSettings.settings);

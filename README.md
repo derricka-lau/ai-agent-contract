@@ -115,7 +115,7 @@ Uninstall restores or removes only ledger-owned values:
 
 - An unchanged managed file is restored to its pre-install content or removed if it did not exist before installation.
 - A user-modified managed file is preserved.
-- Owned VS Code fields are restored only when their current values still match the installed values; unrelated fields and comments remain.
+- Owned JSON/JSONC settings fields (such as Claude `permissions.deny` and `hooks.PreToolUse`) are restored only when their current values still match the installed values; unrelated fields and comments remain.
 - The installed shell line and Git hook path are restored only when still owned.
 - Unrelated files and settings are never removed.
 

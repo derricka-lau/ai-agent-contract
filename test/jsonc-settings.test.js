@@ -41,3 +41,39 @@ test('JSONC settings preserve comments and restore only managed keys', () => {
   assert.match(restored.content, /"chat\.useClaudeMdFile": true/);
   assert.deepEqual(restored.preservedKeys, []);
 });
+
+test('nested JSONC settings preserve sibling and top-level user keys and clean up created parents', () => {
+  const original = `${JSON.stringify({
+    autoMode: true,
+    model: 'claude-opus-5-5',
+    enabledPlugins: { example: true },
+    theme: 'dark',
+    permissions: {
+      allow: ['Bash(git status)'],
+    },
+  }, null, 2)}\n`;
+
+  const applied = applyJsoncSettings(original, [
+    { path: ['permissions', 'deny'], value: ['Read(**/.env.local)'] },
+    { path: ['hooks', 'PreToolUse'], value: [{ matcher: '.*', hooks: [] }] },
+  ]);
+
+  const merged = JSON.parse(applied.content);
+  assert.equal(merged.autoMode, true);
+  assert.equal(merged.model, 'claude-opus-5-5');
+  assert.deepEqual(merged.enabledPlugins, { example: true });
+  assert.equal(merged.theme, 'dark');
+  assert.deepEqual(merged.permissions.allow, ['Bash(git status)']);
+  assert.deepEqual(merged.permissions.deny, ['Read(**/.env.local)']);
+  assert.deepEqual(merged.hooks.PreToolUse, [{ matcher: '.*', hooks: [] }]);
+
+  const edited = JSON.parse(applied.content);
+  edited.theme = 'light';
+  const restored = restoreJsoncSettings(`${JSON.stringify(edited, null, 2)}\n`, applied.changes);
+  const afterRestore = JSON.parse(restored.content);
+
+  assert.equal(afterRestore.theme, 'light');
+  assert.deepEqual(afterRestore.permissions, { allow: ['Bash(git status)'] });
+  assert.equal(Object.hasOwn(afterRestore, 'hooks'), false);
+  assert.deepEqual(restored.preservedKeys, []);
+});
