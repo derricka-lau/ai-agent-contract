@@ -1,23 +1,18 @@
 ---
 name: typescript-react
-description: TypeScript and React coding conventions — strict typing, functional components, testing patterns. Use when working with TypeScript, TSX, or React files.
+description: Opinionated TypeScript and React conventions — strict types, interface/named-export preferences, and behaviour-first testing. Use when working with TypeScript, TSX, or React files.
 ---
 
 # TypeScript / React Conventions
 
-## Code style
-- Use strict TypeScript (`strict: true`). No `any` unless absolutely unavoidable.
-- Prefer `interface` over `type` for object shapes. Use `type` for unions and intersections.
-- Use functional components with hooks. No class components.
-- Prefer named exports over default exports.
+## Preferences
+- Keep TypeScript strict (`strict: true`); avoid `any` unless justified at an untyped boundary.
+- Prefer `interface` over `type` for object shapes; use `type` for unions and intersections.
+- Prefer named exports over default exports (unless framework routing requires a default export) and functional components with hooks.
 
 ## Testing
-- Use the test runner configured in the project (`vitest`, `jest`, or similar).
-- For behaviour changes, write or update the smallest failing test first, then implement until it passes.
-- Start with the narrowest test target the runner supports before using the full suite.
-- Test behaviour, not implementation — assert on rendered output and user interactions.
+- For behaviour changes, write or update the smallest failing test first using the repo's configured runner (`vitest`, `jest`, etc.), targeting the single file/test before the full suite.
+- Assert on user-visible rendered output and interactions rather than internal component state.
 
-## Commands
-- Test: `npm run test` or `yarn test`
-- Lint: `npm run lint`
-- Type-check: `npx tsc --noEmit`
+## Validation
+- Prefer the repository's scripts from `package.json` or CI for test, lint, format, and type-check (`tsc --noEmit`).
