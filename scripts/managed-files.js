@@ -687,7 +687,7 @@ function walkSourceFiles(sourceRoot) {
   return files;
 }
 
-function buildDesiredFiles(repoRoot, generatedRoot, home, profile = 'hardened') {
+function buildDesiredFiles(repoRoot, generatedRoot, home, profile = 'hardened', gitHooks = false) {
   const desired = new Map();
 
   function addFile(source, sourceRoot, target, forcedMode = null) {
@@ -719,9 +719,13 @@ function buildDesiredFiles(repoRoot, generatedRoot, home, profile = 'hardened') 
     }
   }
 
-  for (const runtime of ['claude', 'codex', 'copilot']) {
+  for (const runtime of ['claude', 'codex', 'copilot', 'agents']) {
     addTree(path.join(generatedRoot, runtime), path.join(home, `.${runtime}`));
   }
+  addTree(
+    path.join(generatedRoot, 'antigravity'),
+    path.join(home, '.gemini', 'config', 'plugins', 'ai-agent-contract'),
+  );
 
   const skillsRoot = path.join(repoRoot, 'skills');
   for (const source of walkSourceFiles(skillsRoot)) {
@@ -738,6 +742,15 @@ function buildDesiredFiles(repoRoot, generatedRoot, home, profile = 'hardened') 
     const stateRoot = statePaths(home).stateRoot;
     addFile(path.join(repoRoot, 'scripts', 'guard.js'), repoRoot, path.join(stateRoot, 'guard.js'), 0o755);
     addFile(path.join(repoRoot, 'core', 'guardrails.json'), repoRoot, path.join(stateRoot, 'guardrails.json'));
+  }
+
+  if (gitHooks) {
+    addFile(
+      path.join(repoRoot, 'hooks', 'commit-msg'),
+      repoRoot,
+      path.join(home, '.git-hooks', 'commit-msg'),
+      0o755,
+    );
   }
 
   return desired;
@@ -1161,10 +1174,10 @@ function recoverPendingTransaction(paths) {
   return true;
 }
 
-function installManaged({ repoRoot, generatedRoot, home, shellRc, profile = 'hardened' }) {
+function installManaged({ repoRoot, generatedRoot, home, shellRc, profile = 'hardened', gitHooks = false }) {
   validateInstallProfile(profile);
   const paths = statePaths(home);
-  const desired = buildDesiredFiles(repoRoot, generatedRoot, paths.home, profile);
+  const desired = buildDesiredFiles(repoRoot, generatedRoot, paths.home, profile, gitHooks);
   const desiredSettings = desiredJsonc(generatedRoot, paths.home);
   const shellTarget = validateManagedTarget(path.resolve(shellRc), paths.home);
   const ledger = readLedger(paths);
@@ -1267,9 +1280,19 @@ function installManaged({ repoRoot, generatedRoot, home, shellRc, profile = 'har
       }
     }
 
-    const installedGitValues = [];
-    const previousGitValues = [];
-    if (ledger && isDeepStrictEqual(gitBefore, ledger.git.installedValues)) {
+    let installedGitValues = [];
+    let previousGitValues = [];
+    if (gitHooks) {
+      installedGitValues = [path.join(paths.home, '.git-hooks')];
+      previousGitValues = ledger && ledger.git.installedValues.length > 0
+        ? ledger.git.previousValues
+        : gitBefore;
+      setGitConfigValues(paths.home, installedGitValues);
+    } else if (
+      ledger
+      && ledger.git.installedValues.length > 0
+      && isDeepStrictEqual(gitBefore, ledger.git.installedValues)
+    ) {
       setGitConfigValues(paths.home, ledger.git.previousValues);
     }
 
@@ -1423,7 +1446,7 @@ function requiredPath(values, name) {
 
 function validateCliOptions(command, values) {
   const allowedOptions = {
-    install: new Set(['repo-root', 'generated-root', 'home', 'shell-rc', 'profile']),
+    install: new Set(['repo-root', 'generated-root', 'home', 'shell-rc', 'profile', 'git-hooks']),
     uninstall: new Set(['home', 'shell-rc']),
     recover: new Set(['home']),
     unlock: new Set(['home']),
@@ -1465,12 +1488,17 @@ function runCli(argv) {
     }
     const shellRc = requiredPath(values, 'shell-rc');
     if (command === 'install') {
+      const gitHooksRaw = values['git-hooks'] ?? 'false';
+      if (gitHooksRaw !== 'true' && gitHooksRaw !== 'false') {
+        throw new Error(`Invalid --git-hooks value: ${gitHooksRaw}`);
+      }
       const result = installManaged({
         repoRoot: requiredPath(values, 'repo-root'),
         generatedRoot: requiredPath(values, 'generated-root'),
         home,
         shellRc,
         profile: values.profile || 'hardened',
+        gitHooks: gitHooksRaw === 'true',
       });
       process.stdout.write(`Installed ${result.files.length} managed files.\n`);
     } else {

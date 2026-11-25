@@ -13,6 +13,7 @@ Agents must not read, display, edit, diff, summarise, copy, or log content match
 - GitHub Copilot must deny protected paths through a hook or equivalent deterministic tool gate when available.
 - Compatible Codex installations must apply the sensitive-file guard through a trusted `PreToolUse` hook where that hook can observe the tool call.
 - Compatible Claude Code settings must deny protected paths through `permissions.deny` in settings or managed settings.
+- Compatible Antigravity installations must deny protected paths through the generated plugin `PreToolUse` hook backed by the shared guard.
 - All tools must also include instruction-level refusal language, because deterministic gates are defence-in-depth rather than a replacement for policy.
 
 ## Refusal Behaviour

@@ -23,6 +23,7 @@ shell_rc_path() {
 }
 
 verify_prompt_installed() {
+  local git_hooks="$1"
   local pass=0
   local fail=0
 
@@ -45,7 +46,13 @@ verify_prompt_installed() {
   check "Copilot instructions installed" test -f "$HOME/.copilot/instructions/global-contract.instructions.md"
   check "Claude instructions installed" test -f "$HOME/.claude/CLAUDE.md"
   check "Codex instructions installed" test -f "$HOME/.codex/AGENTS.md"
-  check "Skills installed" test -f "$HOME/.copilot/skills/php-cakephp/SKILL.md"
+  check "Antigravity plugin manifest installed" test -f "$HOME/.gemini/config/plugins/ai-agent-contract/plugin.json"
+  check "Antigravity contract rules installed" test -f "$HOME/.gemini/config/plugins/ai-agent-contract/rules/AGENTS.md"
+  check "Shared skills installed" test -f "$HOME/.agents/skills/php-cakephp/SKILL.md"
+  check "Coach mode skill installed" test -f "$HOME/.agents/skills/coach-mode/SKILL.md"
+  if [[ "$git_hooks" == true ]]; then
+    check "Git commit-msg hook installed" test -x "$HOME/.git-hooks/commit-msg"
+  fi
 
   log ""
   log "Results: $pass passed, $fail failed"
@@ -55,6 +62,7 @@ verify_prompt_installed() {
 }
 
 verify_installed() {
+  local git_hooks="$1"
   local pass=0
   local fail=0
 
@@ -80,8 +88,16 @@ verify_installed() {
   check "Claude deny rules installed" grep -Fq 'Read(**/.env.local)' "$HOME/.claude/settings.json"
   check "Claude deterministic hook installed" test -x "$HOME/.claude/hooks/pre-tool-guard.sh"
   check "Codex sensitive-file hook installed" test -f "$HOME/.codex/hooks.json"
+  check "Antigravity plugin manifest installed" test -f "$HOME/.gemini/config/plugins/ai-agent-contract/plugin.json"
+  check "Antigravity contract rules installed" test -f "$HOME/.gemini/config/plugins/ai-agent-contract/rules/AGENTS.md"
+  check "Antigravity hooks.json installed" test -f "$HOME/.gemini/config/plugins/ai-agent-contract/hooks.json"
+  check "Antigravity deterministic hook installed" test -x "$HOME/.gemini/config/plugins/ai-agent-contract/hooks/pre-tool-guard.sh"
   check "Shared guard installed" test -x "$HOME/.local/share/ai-agent-contract/guard.js"
-  check "Skills installed" test -f "$HOME/.copilot/skills/php-cakephp/SKILL.md"
+  check "Shared skills installed" test -f "$HOME/.agents/skills/php-cakephp/SKILL.md"
+  check "Coach mode skill installed" test -f "$HOME/.agents/skills/coach-mode/SKILL.md"
+  if [[ "$git_hooks" == true ]]; then
+    check "Git commit-msg hook installed" test -x "$HOME/.git-hooks/commit-msg"
+  fi
 
   local hook_output
   hook_output="$(printf '%s' '{"tool_name":"readFile","tool_input":{"path":".env.local"}}' | "$HOME/.copilot/hooks/pre-tool-guard.sh")"
@@ -90,6 +106,16 @@ verify_installed() {
     pass=$((pass + 1))
   else
     log "  [FAIL] Copilot hook denies .env.local"
+    fail=$((fail + 1))
+  fi
+
+  local agy_output
+  agy_output="$(printf '%s' '{"toolCall":{"name":"read_file","args":{"Path":".env.local"}}}' | "$HOME/.gemini/config/plugins/ai-agent-contract/hooks/pre-tool-guard.sh")"
+  if [[ "$agy_output" == *'"decision":"deny"'* ]]; then
+    log "  [PASS] Antigravity hook denies .env.local"
+    pass=$((pass + 1))
+  else
+    log "  [FAIL] Antigravity hook denies .env.local"
     fail=$((fail + 1))
   fi
 
@@ -102,6 +128,7 @@ verify_installed() {
 
 main() {
   local profile="prompt"
+  local git_hooks="false"
   while [[ "$#" -gt 0 ]]; do
     case "$1" in
       --profile)
@@ -112,9 +139,13 @@ main() {
         profile="$2"
         shift 2
         ;;
+      --git-hooks)
+        git_hooks="true"
+        shift
+        ;;
       *)
         log "ERROR: unknown option: $1"
-        log "Usage: ./install.sh [--profile prompt|hardened]"
+        log "Usage: ./install.sh [--profile prompt|hardened] [--git-hooks]"
         exit 1
         ;;
     esac
@@ -122,11 +153,11 @@ main() {
 
   if [[ "$profile" != prompt && "$profile" != hardened ]]; then
     log "ERROR: invalid profile: $profile"
-    log "Usage: ./install.sh [--profile prompt|hardened]"
+    log "Usage: ./install.sh [--profile prompt|hardened] [--git-hooks]"
     exit 1
   fi
 
-  log "=== Selected install profile: $profile ==="
+  log "=== Selected install profile: $profile (git-hooks: $git_hooks) ==="
   log "=== Preflight checks ==="
   need_command git
   need_command node
@@ -153,12 +184,13 @@ main() {
     --generated-root "$generated_dir" \
     --home "$HOME" \
     --shell-rc "$(shell_rc_path)" \
-    --profile "$profile"
+    --profile "$profile" \
+    --git-hooks "$git_hooks"
 
   if [[ "$profile" == prompt ]]; then
-    verify_prompt_installed
+    verify_prompt_installed "$git_hooks"
   else
-    verify_installed
+    verify_installed "$git_hooks"
   fi
 
   log ""

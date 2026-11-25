@@ -573,3 +573,57 @@ test('a mid-transaction file failure rolls back earlier writes', (t) => {
 
   assert.deepEqual(snapshotTree(home), before);
 });
+
+test('install and uninstall manage Antigravity plugin and optional git commit-msg hook cleanly', (t) => {
+  const testRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ai-agent-contract-test-'));
+  t.after(() => fs.rmSync(testRoot, { recursive: true, force: true }));
+
+  const generatedRoot = path.join(testRoot, 'generated');
+  const home = path.join(testRoot, 'home');
+  const shellRc = path.join(home, '.bashrc');
+  const globalGit = path.join(testRoot, 'global.gitconfig');
+  const unrelatedGemini = path.join(home, '.gemini', 'config', 'user-hooks.json');
+  const env = {
+    ...process.env,
+    GIT_CONFIG_GLOBAL: globalGit,
+    HOME: home,
+    XDG_CONFIG_HOME: path.join(home, '.config'),
+  };
+
+  execFileSync(process.execPath, [
+    'scripts/generate.js', '--profile', 'hardened', '--out', generatedRoot,
+  ], { cwd: root, stdio: 'pipe' });
+  fs.mkdirSync(path.dirname(unrelatedGemini), { recursive: true });
+  fs.writeFileSync(unrelatedGemini, '{"user":true}\n');
+  fs.writeFileSync(shellRc, '');
+  execFileSync('git', ['config', '--global', 'core.hooksPath', '/previous/hooks'], { env });
+
+  execFileSync(process.execPath, [
+    helper,
+    'install',
+    '--repo-root', root,
+    '--generated-root', generatedRoot,
+    '--home', home,
+    '--shell-rc', shellRc,
+    '--profile', 'hardened',
+    '--git-hooks', 'true',
+  ], { cwd: root, env, stdio: 'pipe' });
+
+  const pluginRoot = path.join(home, '.gemini', 'config', 'plugins', 'ai-agent-contract');
+  assert.ok(fs.existsSync(path.join(pluginRoot, 'plugin.json')));
+  assert.ok(fs.existsSync(path.join(pluginRoot, 'rules', 'AGENTS.md')));
+  assert.ok(fs.existsSync(path.join(pluginRoot, 'hooks.json')));
+  assert.ok(fs.existsSync(path.join(pluginRoot, 'hooks', 'pre-tool-guard.sh')));
+  assert.equal(fs.existsSync(path.join(pluginRoot, 'skills')), false);
+  assert.ok(fs.existsSync(path.join(home, '.agents', 'skills', 'coach-mode', 'SKILL.md')));
+  assert.ok(fs.existsSync(path.join(home, '.git-hooks', 'commit-msg')));
+  assert.deepEqual(gitConfigValues(env), [path.join(home, '.git-hooks')]);
+  assert.equal(fs.readFileSync(unrelatedGemini, 'utf8'), '{"user":true}\n');
+
+  runManagedUninstall({ home, shellRc, env });
+
+  assert.equal(fs.existsSync(path.join(pluginRoot, 'plugin.json')), false);
+  assert.equal(fs.existsSync(path.join(home, '.git-hooks', 'commit-msg')), false);
+  assert.deepEqual(gitConfigValues(env), ['/previous/hooks']);
+  assert.equal(fs.readFileSync(unrelatedGemini, 'utf8'), '{"user":true}\n');
+});

@@ -167,6 +167,32 @@ function claudeSettings(guardrails) {
   }, null, 2)}\n`;
 }
 
+function antigravityPluginManifest() {
+  return `${JSON.stringify({
+    name: 'ai-agent-contract',
+    repository: 'https://github.com/derricka-lau/ai-agent-contract',
+  }, null, 2)}\n`;
+}
+
+function antigravityHooksConfig() {
+  return `${JSON.stringify({
+    'ai-agent-contract-guard': {
+      PreToolUse: [
+        {
+          matcher: '*',
+          hooks: [
+            {
+              type: 'command',
+              command: './hooks/pre-tool-guard.sh',
+              timeout: 15,
+            },
+          ],
+        },
+      ],
+    },
+  }, null, 2)}\n`;
+}
+
 function hookWrapper(kind) {
   return `#!/usr/bin/env bash
 ${generatedHeader('sh').trimEnd()}
@@ -196,6 +222,8 @@ function generateFiles(selectedProfile = 'prompt') {
     contract.trimEnd(),
     '',
   ].join('\n'));
+  files.set('antigravity/plugin.json', antigravityPluginManifest());
+  files.set('antigravity/rules/AGENTS.md', contract);
 
   for (const [id, instruction] of Object.entries(areaInstructions)) {
     files.set(`copilot/instructions/${id}.instructions.md`, copilotInstruction(id, instruction));
@@ -233,35 +261,25 @@ function generateFiles(selectedProfile = 'prompt') {
       },
     }, null, 2)}\n`);
     files.set('copilot/hooks/pre-tool-guard.sh', hookWrapper('copilot-pre-tool'));
-
+    files.set('antigravity/hooks.json', antigravityHooksConfig());
+    files.set('antigravity/hooks/pre-tool-guard.sh', hookWrapper('antigravity-pre-tool'));
   }
 
   const coach = read('core/coach.md');
-  const shared = coachSection(coach, 'SHARED');
-  const coachModes = [
-    {
-      slug: 'guide-mode',
-      section: 'GUIDE',
-      description: 'Coach me with guidance only; I write every line myself',
-    },
-    {
-      slug: 'scaffolding-mode',
-      section: 'SCAFFOLDING',
-      description: 'Write the test and scaffolding for me; I write the logic',
-    },
-    {
-      slug: 'tutor-mode',
-      section: 'TUTOR',
-      description: 'Teach me line by line while I write the code myself',
-    },
-  ];
+  const coachBody = markdownJoin([
+    coachSection(coach, 'SHARED'),
+    coachSection(coach, 'GUIDE'),
+    coachSection(coach, 'SCAFFOLDING'),
+    coachSection(coach, 'TUTOR'),
+  ]);
+  const unifiedCoachSkill = coachSkill(
+    'coach-mode',
+    'Coach me without writing the decision-bearing implementation; supports guide, scaffolding, and tutor depths. Use only when explicitly invoked.',
+    coachBody,
+  );
 
-  for (const mode of coachModes) {
-    const body = markdownJoin([shared, coachSection(coach, mode.section)]);
-    const skill = coachSkill(mode.slug, mode.description, body);
-    files.set(`claude/skills/${mode.slug}/SKILL.md`, skill);
-    files.set(`codex/skills/${mode.slug}/SKILL.md`, skill);
-    files.set(`copilot/skills/${mode.slug}/SKILL.md`, skill);
+  for (const runtime of ['claude', 'codex', 'copilot', 'agents']) {
+    files.set(`${runtime}/skills/coach-mode/SKILL.md`, unifiedCoachSkill);
   }
 
   return files;

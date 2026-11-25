@@ -1,26 +1,18 @@
 ---
 name: python
-description: Python coding conventions — type hints, testing with pytest, code style. Use when working with Python files, FastAPI endpoints, or pytest tests.
+description: Opinionated Python conventions — strict typing, dataclasses/pydantic models, and pytest-first testing. Use when working with Python files, FastAPI endpoints, or pytest tests.
 ---
 
 # Python Conventions
 
-## Code style
-- Always use type hints on function signatures and return types.
-- Use f-strings for string formatting, not `.format()` or `%`.
-- Use meaningful variable names — no single-letter names outside comprehensions.
-- Prefer `pathlib.Path` over `os.path`.
-- Use `dataclasses` or `pydantic` models over raw dicts for structured data.
+## Preferences
+- Annotate function signatures and return types strictly; avoid raw dicts for structured domain data where `dataclass` or `pydantic` models fit.
+- Prefer `pathlib.Path` over `os.path` and f-strings over `.format()` or `%`.
+- Avoid single-letter variable names outside comprehensions.
 
 ## Testing
-- Use `pytest` as the test runner.
-- For behaviour changes, write or update the smallest failing pytest first, then implement until it passes.
-- Prefer `assert x == y` over `unittest`-style `self.assertEqual`.
-- Use fixtures over `setUp`/`tearDown` where possible.
+- Use `pytest` with fixtures over `unittest`-style `TestCase` / `setUp` / `tearDown` unless the repo already uses `unittest`.
+- For behaviour changes, add or update the smallest failing `pytest` test first (`pytest path/to/test_file.py::test_name`), then implement until it passes.
 
-## Commands
-- Single test: `pytest path/to/test_file.py::test_name` or `. .venv/bin/activate && pytest path/to/test_file.py::test_name`
-- Test: `pytest` or `. .venv/bin/activate && pytest`
-- Lint: `ruff check .`
-- Format: `ruff format .`
-- Type-check: `mypy .`
+## Validation
+- Prefer the repository's configured virtual environment and commands from `pyproject.toml`, `Makefile`, or CI (typically `pytest`, linter/formatter, and type-checker).
