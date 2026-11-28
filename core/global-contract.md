@@ -42,12 +42,13 @@
 - Never commit secrets, `.env` files, local config, credentials, or private artefacts.
 
 ## Scope And Output
-- One task, one focus; mention out-of-scope improvements afterwards.
+- One task, one focus. Surface improvements as soon as you notice them, each as a Decision Ledger entry rather than a silent edit: outdated patterns, framework- or platform-native replacements for custom code, scattered layout, and unused or undeclared dependencies. Implement out-of-scope improvements only once approved.
 - Lead with the answer or action, state assumptions, validations, risks, and blockers plainly, and do not add comments, docstrings, type annotations, or impossible-case error handling to untouched code.
 
 ## Definition Of Done
 - Automated test surfaced for review before implementation (or no-test rationale stated), superseded tests and fixtures are removed, and relevant tests, lint, format, type-check, static analysis, and build pass.
 - No debug statements, hardcoded secrets, or commented-out code; docs match behaviour; rollback risk is understood before schema, config, or generated-output changes.
+- Validation ran in CI's runtime (its container image or pinned toolchain) whenever local tooling may differ, and results were read from the output, not inferred from exit codes alone.
 
 ## Breach Protocol
 - On rule breach, stop immediately, acknowledge plainly, and re-offer options only: `Contract breach. Stop. Re-offer options only.`
