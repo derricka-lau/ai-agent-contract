@@ -155,3 +155,13 @@ test('generated contracts include concise governance, approval modes, commit rul
   assert.match(workflow, /one main agent loop/i);
   assert.match(workflow, /independent parallel work/i);
 });
+
+test('test instructions apply to the common test file naming conventions', { skip: typeof path.matchesGlob !== 'function' && 'path.matchesGlob is unavailable' }, () => {
+  const { applyTo } = JSON.parse(fs.readFileSync(path.join(root, 'core', 'area-instructions.json'), 'utf8')).tests;
+  for (const file of ['src/foo.test.ts', 'src/foo.spec.tsx', 'web/foo.test.js', 'tests/test_foo.py', 'tests/foo_test.py', 'pkg/foo_test.go', 'tests/FooTest.php', 'src/FooSpec.ts']) {
+    assert.ok(path.matchesGlob(file, applyTo), `${file} should match ${applyTo}`);
+  }
+  for (const file of ['src/foo.ts', 'README.md', 'src/testing.py']) {
+    assert.equal(path.matchesGlob(file, applyTo), false, `${file} should not match ${applyTo}`);
+  }
+});
