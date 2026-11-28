@@ -20,7 +20,7 @@
     ]
   },
   "tests": {
-    "applyTo": "**/*{Test,Spec}.{php,ts,tsx,js,jsx,py}",
+    "applyTo": "**/{*Test,*Spec,*.test,*.spec,test_*,*_test}.{php,ts,tsx,js,jsx,py,go}",
     "title": "Test Instructions",
     "body": [
       "Prefer behavioural assertions over implementation details.",
