@@ -14,6 +14,7 @@ test('canonical skill catalogue contains only focused, non-duplicated skills', (
   assert.deepEqual(skills, [
     'decision-ledger',
     'implement-mode',
+    'migration-mode',
     'php-cakephp',
     'plan-mode',
     'python',
@@ -64,4 +65,32 @@ test('plan-mode and implement-mode define two-session commit-by-commit handoff',
   assert.match(impl, /Do not run `git commit` until the user explicitly confirms sign-off/i);
   assert.match(impl, /Conventional Commit/);
   assert.match(impl, /Co-authored-by:/);
+});
+
+test('migration-mode is opt-in, gated and ships its proof scripts and references', () => {
+  const skillRoot = path.join(root, 'skills', 'migration-mode');
+  const content = fs.readFileSync(path.join(skillRoot, 'SKILL.md'), 'utf8');
+  const description = content.match(/^description:\s*(.+)$/m)?.[1] || '';
+
+  assert.match(description, /explicitly invokes migration-mode/i);
+  for (const gate of ['G0 Baseline', 'G1 Inventory', 'G2 Pin first', 'G3 Like-for-like cutover', 'G4 Framework-native audit',
+    'G5 Intentional changes', 'G6 Structural moves', 'G7 Dead code', 'G8 Dependencies', 'G9 Live comparison', 'G10 Finish']) {
+    assert.ok(content.includes(gate), `missing gate: ${gate}`);
+  }
+  assert.match(content, /Raise improvements proactively/);
+  assert.match(content, /Never bend a pin/);
+
+  const scripts = fs.readdirSync(path.join(skillRoot, 'scripts')).sort();
+  assert.deepEqual(scripts, ['ast_move_check.py', 'ci_in_image.sh', 'import_bindings.py', 'mutants.py', 'reachability.py', 'snapshot.sh']);
+  for (const script of scripts) {
+    assert.ok(content.includes(`\`${script}`), `SKILL.md does not document ${script}`);
+  }
+  const references = fs.readdirSync(path.join(skillRoot, 'references')).sort();
+  assert.deepEqual(references, ['failure-modes.md', 'implementer-prompt.md']);
+  for (const reference of references) {
+    assert.ok(content.includes(`references/${reference}`), `SKILL.md does not link ${reference}`);
+  }
+  const prompt = fs.readFileSync(path.join(skillRoot, 'references', 'implementer-prompt.md'), 'utf8');
+  assert.match(prompt, /Precondition: HEAD is/);
+  assert.match(prompt, /Fail-First Pattern/);
 });

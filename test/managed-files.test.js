@@ -776,3 +776,40 @@ test('shared skill folders allow only SKILL.md plus flat scripts and references'
     assert.equal(isAllowedSkillFile(rejected), false, rejected);
   }
 });
+
+test('skill scripts and references install as plain files in every runtime and uninstall cleanly', (t) => {
+  const testRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ai-agent-contract-test-'));
+  t.after(() => fs.rmSync(testRoot, { recursive: true, force: true }));
+
+  const generatedRoot = path.join(testRoot, 'generated');
+  const home = path.join(testRoot, 'home');
+  const shellRc = path.join(home, '.bashrc');
+  const env = {
+    ...process.env,
+    GIT_CONFIG_GLOBAL: path.join(testRoot, 'global.gitconfig'),
+    HOME: home,
+    XDG_CONFIG_HOME: path.join(home, '.config'),
+  };
+  execFileSync(process.execPath, ['scripts/generate.js', '--out', generatedRoot], { cwd: root, stdio: 'pipe' });
+  fs.mkdirSync(home, { recursive: true });
+  fs.writeFileSync(shellRc, '# User shell configuration.\n');
+
+  runManagedInstall({ generatedRoot, home, shellRc, env, profile: 'prompt' });
+
+  const supportFiles = ['scripts/mutants.py', 'scripts/snapshot.sh', 'references/implementer-prompt.md'];
+  const targets = [];
+  for (const runtime of ['.claude', '.codex', '.copilot', '.agents']) {
+    const skillRoot = path.join(home, runtime, 'skills', 'migration-mode');
+    assert.ok(fs.existsSync(path.join(skillRoot, 'SKILL.md')), `missing SKILL.md in ${runtime}`);
+    for (const file of supportFiles) {
+      const target = path.join(skillRoot, file);
+      assert.equal(fs.statSync(target).mode & 0o777, 0o644, target);
+      targets.push(target);
+    }
+  }
+
+  runManagedUninstall({ home, shellRc, env });
+  for (const target of targets) {
+    assert.equal(fs.existsSync(target), false, `left behind: ${target}`);
+  }
+});
