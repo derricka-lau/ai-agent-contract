@@ -7,6 +7,7 @@ const test = require('node:test');
 
 const {
   installManaged,
+  isAllowedSkillFile,
   validateManagedSource,
   validateManagedTarget,
 } = require('../scripts/managed-files');
@@ -752,4 +753,26 @@ test('hardened install creates Claude settings when absent and uninstall removes
 
   runManagedUninstall({ home, shellRc, env });
   assert.equal(fs.existsSync(claudeSettings), false);
+});
+
+test('shared skill folders allow only SKILL.md plus flat scripts and references', () => {
+  for (const allowed of [
+    'plan-mode/SKILL.md',
+    'migration-mode/scripts/mutants.py',
+    'migration-mode/scripts/ci_in_image.sh',
+    'migration-mode/references/failure-modes.md',
+  ]) {
+    assert.equal(isAllowedSkillFile(allowed), true, allowed);
+  }
+  for (const rejected of [
+    'migration-mode/notes.txt',
+    'migration-mode/scripts/run.js',
+    'migration-mode/scripts/nested/helper.py',
+    'migration-mode/scripts/.hidden.py',
+    'migration-mode/references/table.csv',
+    'migration-mode/hooks/pre-tool.sh',
+    'Migration/scripts/helper.py',
+  ]) {
+    assert.equal(isAllowedSkillFile(rejected), false, rejected);
+  }
 });
