@@ -24,7 +24,7 @@ if printf '%s\n' "$cleaned" | grep -Eiq '^[[:space:]]*co-authored-by:[[:space:]]
   exit 1
 fi
 
-if printf '%s\n' "$cleaned" | grep -Eiq '(^[[:space:]]*(generated (with|by)|assisted-by:)|🤖|noreply@anthropic\.com|copilot@github\.com)'; then
+if printf '%s\n' "$cleaned" | grep -Eiq '(^[[:space:]]*(generated[ -](with|by)|assisted-by:)|🤖|noreply@anthropic\.com|copilot@github\.com)'; then
   echo "ERROR: Commit message must not contain AI or tool attribution." >&2
   exit 1
 fi

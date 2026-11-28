@@ -37,6 +37,7 @@ test('commit-msg rejects any Co-authored-by trailer and AI attribution footers',
     ['co-author in merge', "Merge branch 'main'\n\nCo-authored-by: Bot <bot@example.com>\n"],
     ['generated-with footer', 'docs: update readme\n\nGenerated with Claude Code\n'],
     ['robot footer', 'chore: clean skills\n\n🤖 Generated with Antigravity\n'],
+    ['generated-by trailer', 'docs: update readme\n\nGenerated-by: Some Tool\n'],
   ]) {
     const result = runCommitMsg(t, message);
     assert.equal(result.status, 1, `expected reject for ${label}`);
