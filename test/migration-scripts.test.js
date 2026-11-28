@@ -153,3 +153,13 @@ test('snapshot records the working tree without moving HEAD, the index or files'
   assert.equal(git(repo, 'show', `${snapshot}:file.txt`), 'working tree');
   assert.equal(git(repo, 'rev-parse', `${snapshot}^`), head);
 });
+
+test('mutants works for a non-Python stack when no package is given', { skip: skipWithoutPython }, (t) => {
+  const tree = tempDir(t);
+  write(tree, 'rules.js', 'module.exports = { LIMIT: 4 };\n');
+  write(tree, 'check.js', "const assert = require('node:assert');\nassert.equal(require('./rules').LIMIT, 4);\n");
+  write(tree, 'spec.json', JSON.stringify([{ id: 'limit-off-by-one', file: 'rules.js', old: 'LIMIT: 4', new: 'LIMIT: 5' }]));
+  const result = run(python, [path.join(scripts, 'mutants.py'), '--tree', tree, '--spec', path.join(tree, 'spec.json'), '--', process.execPath, 'check.js'], tree);
+  assert.equal(result.status, 0, result.stdout + result.stderr);
+  assert.match(result.stdout, /KILLED\s+limit-off-by-one/);
+});

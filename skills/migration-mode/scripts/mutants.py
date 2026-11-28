@@ -1,14 +1,14 @@
 """Prove each pin detects its rule: apply one mutant at a time to a disposable copy and run the tests.
 
-Usage: python3 mutants.py --tree <copy> --spec mutants.json --package pkg [--python PY] [--timeout S] -- <test command...>
+Usage: python3 mutants.py --tree <copy> --spec mutants.json [--package pkg] [--python PY] [--timeout S] -- <test command...>
 
 mutants.json is a list of {"id": "...", "file": "relative/path.py", "old": "exact anchor", "new": "replacement"}.
 Write one or more mutants per inventory row: a limit off by one, a text changed, a branch inverted, a call removed.
 
 Safeguards:
   - refuses a tree containing .git (use `git archive <commit> | tar -x -C <copy>`);
-  - checks that <package> imports from inside the copy (an installed package would make mutants look killed or alive
-    for the wrong reason);
+  - for Python projects, --package checks that the package imports from inside the copy (an installed package would
+    make mutants look killed or alive for the wrong reason); other stacks run the same way without it;
   - requires the unmutated suite to pass first;
   - requires each anchor to occur exactly once;
   - restores every file after its run;
@@ -44,7 +44,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=(__doc__ or "").split("\n\n")[0])
     parser.add_argument("--tree", type=pathlib.Path, required=True)
     parser.add_argument("--spec", type=pathlib.Path, required=True)
-    parser.add_argument("--package", required=True)
+    parser.add_argument("--package", help="Python package that must import from inside the copy")
     parser.add_argument("--python", default=sys.executable)
     parser.add_argument("--timeout", type=float, default=900)
     parser.add_argument("--error-codes", default="2,3,4,5")
@@ -66,9 +66,10 @@ def main() -> int:
         "p = pathlib.Path(getattr(m, '__file__', None) or list(m.__path__)[0]).resolve(); "
         "assert p.is_relative_to(pathlib.Path.cwd().resolve()), p; print(p)"
     )
-    code, tail = _run([args.python, "-c", probe], tree, 60)
-    if code != 0:
-        raise SystemExit(f"{args.package} does not import from inside {tree}: {tail}")
+    if args.package:
+        code, tail = _run([args.python, "-c", probe], tree, 60)
+        if code != 0:
+            raise SystemExit(f"{args.package} does not import from inside {tree}: {tail}")
     code, tail = _run(command, tree, args.timeout)
     if code != 0:
         raise SystemExit(f"the unmutated suite is not green (exit {code}): {tail}")

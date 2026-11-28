@@ -56,7 +56,7 @@ The scripts live in this skill's `scripts/` folder and use only the standard lib
 | `ast_move_check.py <repo> <base> <head> [--path P]` | That code is identical once imports are stripped, allowing definitions to move between files. Lists `__all__` and docstring edits separately. |
 | `import_bindings.py dump` / `compare` | That every import statement still binds the same object (source hash for functions and classes, value for constants), through the rename map. |
 | `reachability.py <tree> --package P [--baseline <tree>]` | Which definitions are unreachable from the entry points, and which became unreachable only on the candidate. |
-| `mutants.py --tree <copy> --spec mutants.json --package P -- <test command>` | That each pin detects its rule. It refuses git work trees, checks that tests import the copy, and requires a green unmutated run first. |
+| `mutants.py --tree <copy> --spec mutants.json [--package P] -- <test command>` | That each pin detects its rule, in any stack (the test command is yours). It refuses git work trees, requires a green unmutated run first, and with `--package` checks that Python tests import the copy. |
 
 ## Plan Bookkeeping
 
