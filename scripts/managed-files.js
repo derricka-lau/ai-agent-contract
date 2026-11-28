@@ -799,6 +799,15 @@ function walkSourceFiles(sourceRoot) {
   return files;
 }
 
+const SKILL_SUPPORT_FILE = /^[a-z0-9]+(?:-[a-z0-9]+)*\/(?:references\/[a-z0-9]+(?:[-_][a-z0-9]+)*\.md|scripts\/[a-z0-9]+(?:[-_][a-z0-9]+)*\.(?:py|sh))$/;
+
+// A skill folder holds SKILL.md plus, optionally, flat references/*.md and scripts/*.py|*.sh.
+// Support files install as plain 0644 files: they are read or run explicitly, never executed as hooks.
+function isAllowedSkillFile(relativePath) {
+  const normalised = relativePath.split(path.sep).join('/');
+  return path.posix.basename(normalised) === 'SKILL.md' || SKILL_SUPPORT_FILE.test(normalised);
+}
+
 function buildDesiredFiles(repoRoot, generatedRoot, home, profile = 'hardened', gitHooks = false) {
   const desired = new Map();
 
@@ -849,12 +858,13 @@ function buildDesiredFiles(repoRoot, generatedRoot, home, profile = 'hardened', 
 
   const skillsRoot = path.join(repoRoot, 'skills');
   for (const source of walkSourceFiles(skillsRoot)) {
-    if (path.basename(source) !== 'SKILL.md') {
+    const relativePath = path.relative(skillsRoot, source);
+    if (!isAllowedSkillFile(relativePath)) {
       throw new Error(`Unexpected shared skill file: ${source}`);
     }
-    const relativePath = path.relative(skillsRoot, source);
+    const supportFileMode = path.basename(source) === 'SKILL.md' ? null : 0o644;
     for (const runtimeRoot of ['.claude', '.codex', '.copilot', '.agents']) {
-      addFile(source, skillsRoot, path.join(home, runtimeRoot, 'skills', relativePath));
+      addFile(source, skillsRoot, path.join(home, runtimeRoot, 'skills', relativePath), supportFileMode);
     }
   }
 
@@ -1681,6 +1691,7 @@ module.exports = {
   acquireOperationLock,
   applyJsoncSettings,
   installManaged,
+  isAllowedSkillFile,
   releaseOperationLock,
   restoreJsoncSettings,
   runCli,

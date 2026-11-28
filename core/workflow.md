@@ -21,9 +21,20 @@ For two-session work, use `plan-mode` (with `web-research`) to produce a verifie
 ## Review Flow
 
 1. Read the diff and nearby context (use isolated context or the `review-risk` skill for higher-risk changes).
+   Prove claims mechanically: never truncate evidence that a completeness claim rests on, use word-boundary search patterns, and verify uncommitted work against a snapshot commit of the working tree.
 2. Prioritise correctness, security, regression risk, and missing tests.
 3. Report findings first, ordered by severity.
 4. If no findings exist, say so and mention residual risks.
+
+## Implementer And Verifier Split
+
+When a separate agent or tool makes the repository edits:
+
+1. The verifier keeps all analysis: inventories, behaviour mappings, research, probes and verification. The implementer receives only edit tasks.
+2. Each implementer prompt opens with a precondition gate (the expected `HEAD` and a clean tree), names the exact files in scope, says when to stop and report, and lists what to paste back.
+3. The implementer's report is a claim. The verifier re-runs every check independently on a snapshot of the working tree.
+4. When the user commits, give exact commit commands with explicit paths, then confirm the committed tree equals the verified snapshot.
+5. For behaviour-preserving migrations, load `migration-mode`.
 
 ## Security Flow
 

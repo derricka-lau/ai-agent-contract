@@ -13,7 +13,7 @@ The repository separates canonical sources from generated and installed outputs:
 - `core/guardrails.json` is the single machine-readable source for sensitive paths.
 - `core/sensitive-files.md` explains the policy. Its pattern list is generated from `core/guardrails.json`; the Markdown file is not the enforcement mechanism.
 - `core/area-instructions.json`, `core/coach.md`, `core/user-context.md`, and `core/workflow.md` define their named contract surfaces.
-- `skills/*/SKILL.md` contains canonical shared skills (`decision-ledger`, `plan-mode`, `implement-mode`, `web-research`, `review-risk`, `php-cakephp`, `python`, `typescript-react`).
+- `skills/*/SKILL.md` contains canonical shared skills (`decision-ledger`, `plan-mode`, `implement-mode`, `migration-mode`, `web-research`, `review-risk`, `php-cakephp`, `python`, `typescript-react`). A skill folder may also carry flat `references/*.md` and `scripts/*.py|*.sh` files, which install as plain `0644` files and are never run as hooks. Any other file under `skills/` stops the install.
 - `hooks/commit-msg` provides optional deterministic enforcement of Conventional Commits and bans `Co-authored-by:` trailers and AI/tool attribution.
 
 Generated runtime files are disposable outputs. Do not edit them by hand. Update the relevant canonical source and regenerate.

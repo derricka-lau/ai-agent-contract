@@ -32,6 +32,10 @@ Execute **strictly one pending (`[ ]`) commit at a time** in order:
    - Update the commit's status in the plan file from `[ ] Pending` to `[x] Committed (<short-sha>)`.
    - Proceed to the next pending commit.
 
+## When The User Commits
+
+If the user prefers to run commits themselves, replace step 6's `git commit` with the exact command (explicit paths, the approved message). After they run it, confirm `git rev-parse HEAD^{tree}` equals the tree you validated, then update the plan status.
+
 ## Handling Plan Divergence
 
 - If codebase reality contradicts the plan, a test reveals an unexpected constraint, or a new material decision arises outside `Approved Decisions`, **stop immediately** and present a Decision Ledger entry before modifying scope or deviating from the plan.
