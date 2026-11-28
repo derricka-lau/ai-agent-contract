@@ -16,19 +16,35 @@
     "id_ed25519",
     ".npmrc",
     ".pypirc",
-    ".netrc"
+    ".netrc",
+    "id_ecdsa",
+    "id_dsa",
+    ".git-credentials"
+  ],
+  "protectedBaseNamePrefixes": [
+    ".env."
   ],
   "protectedExtensions": [
     ".pem",
-    ".key"
+    ".key",
+    ".p12",
+    ".pfx",
+    ".jks",
+    ".keystore"
   ],
   "protectedPathFragments": [
     ".aws/credentials",
-    ".azure/"
+    ".azure/",
+    ".ssh/",
+    ".docker/config.json",
+    ".kube/config",
+    ".config/gh/hosts.yml",
+    ".config/gcloud/"
   ],
-  "safeExampleBaseNames": [
-    ".env.example",
-    ".env.sample",
-    ".env.template"
+  "safeExampleMarkers": [
+    "example",
+    "sample",
+    "template",
+    "default"
   ]
 }

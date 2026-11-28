@@ -57,10 +57,11 @@ function markdownCodeList(values) {
 function sensitiveFilePolicy(guardrails) {
   const source = read('core/sensitive-files.md');
   const patternGroups = [
-    `- Exact file names: ${markdownCodeList(guardrails.protectedBaseNames)}.`,
+    `- Exact file names (any letter case): ${markdownCodeList(guardrails.protectedBaseNames)}.`,
+    `- File names starting with: ${markdownCodeList(guardrails.protectedBaseNamePrefixes)}.`,
     `- Filename suffixes: ${markdownCodeList(guardrails.protectedExtensions)}.`,
     `- Path fragments: ${markdownCodeList(guardrails.protectedPathFragments)}.`,
-    `- Safe example names: ${markdownCodeList(guardrails.safeExampleBaseNames)}.`,
+    `- Safe template markers (as the final extension): ${markdownCodeList(guardrails.safeExampleMarkers.map((marker) => `.${marker}`))}.`,
   ].join('\n');
 
   if (!source.includes(sensitivePolicyMarker)) {
@@ -122,7 +123,9 @@ function denyPatterns(guardrails) {
   for (const extension of guardrails.protectedExtensions) {
     readEdit.push(`**/*${extension}`);
   }
-  readEdit.push('~/.aws/credentials', '~/.azure/**');
+  for (const fragment of guardrails.protectedPathFragments) {
+    readEdit.push(fragment.endsWith('/') ? `~/${fragment}**` : `~/${fragment}`);
+  }
 
   return readEdit;
 }
@@ -144,7 +147,6 @@ function claudeSettings(guardrails) {
   return `${JSON.stringify({
     permissions: {
       deny: [
-        'Read(~/.ssh/**)',
         ...patterns.map((pattern) => `Read(${pattern})`),
         ...patterns.map((pattern) => `Edit(${pattern})`),
         ...bashDeny,
