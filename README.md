@@ -154,8 +154,9 @@ npm ci --ignore-scripts --no-audit --no-fund
 npm run check
 for file in scripts/*.js; do node --check "$file"; done
 bash -n install.sh install-devcontainer.sh uninstall.sh hooks/commit-msg
+shellcheck install.sh install-devcontainer.sh uninstall.sh hooks/commit-msg $(find skills -name '*.sh')
 git diff --check
 npm audit --omit=dev
 ```
 
-CI runs the lockfile install, complete Node test suite, generator, doctor, JavaScript syntax checks, shell syntax checks, and diff hygiene on Node.js 22.
+CI runs the lockfile install, complete Node test suite, generator, doctor, JavaScript syntax checks, shell syntax checks, shellcheck, the production dependency audit, and diff hygiene on Node.js 22.

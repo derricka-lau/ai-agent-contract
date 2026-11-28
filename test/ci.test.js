@@ -13,6 +13,8 @@ test('CI actions are immutable and have an update path', () => {
   assert.match(workflow, /actions\/setup-node@[0-9a-f]{40}\s+# v6\.4\.0/);
   assert.doesNotMatch(workflow, /uses:\s+[^\s]+@v\d+\s*$/m);
   assert.match(workflow, /for file in scripts\/\*\.js; do node --check "\$file"; done/);
+  assert.match(workflow, /run: shellcheck install\.sh install-devcontainer\.sh uninstall\.sh hooks\/commit-msg/);
+  assert.match(workflow, /run: npm audit --omit=dev/);
   assert.match(dependabot, /package-ecosystem: "npm"/);
   assert.match(dependabot, /package-ecosystem: "github-actions"/);
   assert.match(dependabot, /interval: "monthly"/);

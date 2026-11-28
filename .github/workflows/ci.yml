@@ -22,4 +22,6 @@ jobs:
       - run: npm run check
       - run: for file in scripts/*.js; do node --check "$file"; done
       - run: bash -n install.sh install-devcontainer.sh uninstall.sh hooks/commit-msg
+      - run: shellcheck install.sh install-devcontainer.sh uninstall.sh hooks/commit-msg $(find skills -name '*.sh')
+      - run: npm audit --omit=dev
       - run: git diff --check
