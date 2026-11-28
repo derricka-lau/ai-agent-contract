@@ -28,7 +28,7 @@ Sensitive-file protection is implemented in code and runtime configuration:
 
 - Copilot CLI runs the shared guard from a user-level `preToolUse` hook using the [current Copilot hook schema](https://docs.github.com/en/copilot/reference/hooks-reference).
 - Codex installs only a standalone `hooks.json` and the shared sensitive-file guard. The contract leaves native sandbox, permission, model, approval, and feature settings to Codex and the host or administrator policy. Codex requires trust review before a non-managed hook runs, and some tool paths are outside hook coverage.
-- Claude Code installs native `permissions.deny` rules and an all-tool `PreToolUse` hook backed by the shared guard.
+- Claude Code installs native `permissions.deny` rules and an all-tool `PreToolUse` hook backed by the shared guard. The `Bash(...)` deny rules name common file readers only; the hook checks every command.
 - Antigravity installs a native global plugin at `~/.gemini/config/plugins/ai-agent-contract/` with a root `hooks.json` `PreToolUse` hook backed by the shared guard.
 - Generated instructions also require refusal, but instructions are not treated as the deterministic control.
 
@@ -96,7 +96,7 @@ The installer intentionally does not install or upgrade Claude Code, Codex, Copi
 7. Restores previously owned editor, shell, Git, or tool settings during an update when they still match the ownership ledger.
 8. Writes the versioned ownership ledger to `~/.local/share/ai-agent-contract/install-state.json`.
 
-The installer never copies or deletes whole runtime directories, never overwrites Git identity files, and never writes the legacy timestamp backup or checksum manifest. Previous content for an overwritten managed file is stored by checksum with mode `0600` and pruned when no ledger entry needs it.
+The installer never copies or deletes whole runtime directories and never overwrites Git identity files. Previous content for an overwritten managed file is stored by checksum with mode `0600` and pruned when no ledger entry needs it.
 
 ## Update Conflicts
 
