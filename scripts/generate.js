@@ -57,10 +57,11 @@ function markdownCodeList(values) {
 function sensitiveFilePolicy(guardrails) {
   const source = read('core/sensitive-files.md');
   const patternGroups = [
-    `- Exact file names: ${markdownCodeList(guardrails.protectedBaseNames)}.`,
+    `- Exact file names (any letter case): ${markdownCodeList(guardrails.protectedBaseNames)}.`,
+    `- File names starting with: ${markdownCodeList(guardrails.protectedBaseNamePrefixes)}.`,
     `- Filename suffixes: ${markdownCodeList(guardrails.protectedExtensions)}.`,
     `- Path fragments: ${markdownCodeList(guardrails.protectedPathFragments)}.`,
-    `- Safe example names: ${markdownCodeList(guardrails.safeExampleBaseNames)}.`,
+    `- Safe template markers (as the final extension): ${markdownCodeList(guardrails.safeExampleMarkers.map((marker) => `.${marker}`))}.`,
   ].join('\n');
 
   if (!source.includes(sensitivePolicyMarker)) {

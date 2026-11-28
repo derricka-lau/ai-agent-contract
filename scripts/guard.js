@@ -7,31 +7,43 @@ const mode = process.argv[2] || '';
 const guardrailsPath = process.env.AI_AGENT_CONTRACT_GUARDRAILS
   || path.join(__dirname, 'guardrails.json');
 
+// Keys whose value is file content written by a file tool, not a path or command. Their text is not scanned, so an
+// agent can write a .gitignore or docs that name protected files; the target path in the same payload still is.
+const CONTENT_KEYS = new Set(['content', 'new_string', 'old_string', 'new_str', 'old_str', 'new_source', 'file_text']);
+
+const GLOB_CHARACTERS = /[*?[]/;
+
 function loadGuardrails() {
   const value = JSON.parse(fs.readFileSync(guardrailsPath, 'utf8'));
+  const rules = {};
   for (const key of [
     'protectedBaseNames',
+    'protectedBaseNamePrefixes',
     'protectedExtensions',
     'protectedPathFragments',
-    'safeExampleBaseNames',
+    'safeExampleMarkers',
   ]) {
-    if (!Array.isArray(value[key]) || !value[key].every((item) => typeof item === 'string')) {
-      throw new Error(`guardrails field ${key} must be an array of strings`);
+    if (!Array.isArray(value[key]) || !value[key].every((item) => typeof item === 'string' && item.length > 0)) {
+      throw new Error(`guardrails field ${key} must be an array of non-empty strings`);
     }
+    rules[key] = value[key].map((item) => item.toLowerCase());
   }
-  return value;
+  return rules;
 }
 
-function collectStrings(value, output = []) {
+function collectStrings(value, output = [], key = '') {
+  if (CONTENT_KEYS.has(key)) {
+    return output;
+  }
   if (typeof value === 'string') {
     output.push(value);
   } else if (Array.isArray(value)) {
     for (const item of value) {
-      collectStrings(item, output);
+      collectStrings(item, output, key);
     }
   } else if (value && typeof value === 'object') {
-    for (const item of Object.values(value)) {
-      collectStrings(item, output);
+    for (const [childKey, item] of Object.entries(value)) {
+      collectStrings(item, output, childKey);
     }
   }
   return output;
@@ -64,32 +76,129 @@ function haystackFromPayload(payload) {
 }
 
 function normaliseToken(token) {
-  return token.replace(/\\/g, '/');
+  return token.replace(/\\/g, '/').toLowerCase();
 }
 
-function isSensitiveToken(token, guardrails) {
-  const normalised = normaliseToken(token);
+function baseNameOf(normalised) {
   const parts = normalised.split('/').filter(Boolean);
-  const baseName = parts[parts.length - 1] || normalised;
+  return parts[parts.length - 1] || normalised;
+}
 
-  if (guardrails.safeExampleBaseNames.includes(baseName)) {
+// A template copy ends in a safe marker extension, for example a protected name followed by `.example`.
+function isSafeExample(baseName, rules) {
+  const segments = baseName.split('.');
+  return segments.length > 1 && rules.safeExampleMarkers.includes(segments[segments.length - 1]);
+}
+
+function matchesFragment(normalised, fragment) {
+  if (normalised.includes(fragment)) {
+    return true;
+  }
+  if (!fragment.endsWith('/')) {
+    return false;
+  }
+  const directory = fragment.slice(0, -1);
+  return normalised === directory || normalised.endsWith(`/${directory}`);
+}
+
+function isSensitiveToken(token, rules) {
+  const normalised = normaliseToken(token);
+  const baseName = baseNameOf(normalised);
+
+  if (isSafeExample(baseName, rules)) {
     return false;
   }
 
-  return guardrails.protectedBaseNames.includes(baseName)
-    || guardrails.protectedExtensions.some((extension) => baseName.endsWith(extension))
-    || guardrails.protectedPathFragments.some((fragment) => normalised.includes(fragment));
+  return rules.protectedBaseNames.includes(baseName)
+    || rules.protectedBaseNamePrefixes.some((prefix) => baseName.startsWith(prefix))
+    || rules.protectedExtensions.some((extension) => baseName.endsWith(extension))
+    || rules.protectedPathFragments.some((fragment) => matchesFragment(normalised, fragment));
 }
 
 function pathTokens(input) {
   return normaliseToken(input)
-    .split(/[^A-Za-z0-9_.\\/~:-]+/)
+    .split(/[^a-z0-9_.\\/~:-]+/)
     .filter(Boolean);
 }
 
-function evaluatePayload(payload, guardrails) {
-  const hasSensitiveFile = pathTokens(haystackFromPayload(payload))
-    .some((token) => isSensitiveToken(token, guardrails));
+function expandBraces(word, budget = { remaining: 64 }) {
+  const match = word.match(/^(.*?)\{([^{}]*,[^{}]*)\}(.*)$/);
+  if (!match || budget.remaining <= 0) {
+    return [word];
+  }
+  return match[2].split(',').flatMap((option) => {
+    budget.remaining -= 1;
+    return expandBraces(`${match[1]}${option}${match[3]}`, budget);
+  });
+}
+
+// Shell words after quote removal and brace expansion, so split or quoted names collapse to what the shell opens.
+function shellWords(input) {
+  const unquoted = input.replace(/\\(.)/g, '$1').replace(/['"]/g, '');
+  return unquoted
+    .split(/[\s;|&<>()`=$]+/)
+    .filter(Boolean)
+    .flatMap((word) => expandBraces(word));
+}
+
+function globToRegExp(glob) {
+  let source = '';
+  for (let index = 0; index < glob.length; index += 1) {
+    const character = glob[index];
+    if (character === '*') {
+      source += '[^/]*';
+    } else if (character === '?') {
+      source += '[^/]';
+    } else if (character === '[') {
+      const close = glob.indexOf(']', index + 1);
+      if (close === -1) {
+        source += '\\[';
+      } else {
+        source += `[${glob.slice(index + 1, close).replace(/[\\\]]/g, '\\$&')}]`;
+        index = close;
+      }
+    } else {
+      source += character.replace(/[.+^${}()|\\]/g, '\\$&');
+    }
+  }
+  return new RegExp(`^${source}$`);
+}
+
+function globCandidates(rules) {
+  return [
+    ...rules.protectedBaseNames,
+    ...rules.protectedBaseNamePrefixes.map((prefix) => `${prefix}local`),
+    ...rules.protectedExtensions.map((extension) => `file${extension}`),
+  ];
+}
+
+// A glob word is sensitive when the shell could expand it to a protected name. Shell globs only match dot files
+// when the pattern itself starts with a dot; other candidates need two literal characters, so `*` stays usable.
+function isSensitiveGlob(word, rules) {
+  const baseName = baseNameOf(normaliseToken(word));
+  if (!GLOB_CHARACTERS.test(baseName)) {
+    return false;
+  }
+  let pattern;
+  try {
+    pattern = globToRegExp(baseName);
+  } catch {
+    return true;
+  }
+  const literalLength = baseName.replace(/\[[^\]]*\]|[*?]/g, '').length;
+  return globCandidates(rules).some((name) => {
+    if (name.startsWith('.')) {
+      return baseName.startsWith('.') && pattern.test(name) && !isSafeExample(name, rules);
+    }
+    return literalLength >= 2 && pattern.test(name) && !isSafeExample(name, rules);
+  });
+}
+
+function evaluatePayload(payload, rules) {
+  const haystack = haystackFromPayload(payload);
+  const words = shellWords(haystack);
+  const hasSensitiveFile = pathTokens(haystack).some((token) => isSensitiveToken(token, rules))
+    || words.some((word) => isSensitiveToken(word, rules) || isSensitiveGlob(word, rules));
   if (hasSensitiveFile) {
     return {
       blocked: true,

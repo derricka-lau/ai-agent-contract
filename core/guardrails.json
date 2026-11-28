@@ -18,6 +18,9 @@
     ".pypirc",
     ".netrc"
   ],
+  "protectedBaseNamePrefixes": [
+    ".env."
+  ],
   "protectedExtensions": [
     ".pem",
     ".key"
@@ -26,9 +29,10 @@
     ".aws/credentials",
     ".azure/"
   ],
-  "safeExampleBaseNames": [
-    ".env.example",
-    ".env.sample",
-    ".env.template"
+  "safeExampleMarkers": [
+    "example",
+    "sample",
+    "template",
+    "default"
   ]
 }

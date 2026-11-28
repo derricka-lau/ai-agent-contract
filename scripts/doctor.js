@@ -109,7 +109,8 @@ const sensitivePatterns = [
   ...guardrails.protectedBaseNames,
   ...guardrails.protectedExtensions,
   ...guardrails.protectedPathFragments,
-  ...guardrails.safeExampleBaseNames,
+  ...guardrails.protectedBaseNamePrefixes,
+  ...guardrails.safeExampleMarkers.map((marker) => `.${marker}`),
 ];
 for (const file of [
   'claude/CLAUDE.md',
@@ -123,7 +124,7 @@ for (const file of [
 }
 
 const blocked = guardrails.protectedBaseNames.find((name) => name.includes('local'));
-const example = guardrails.safeExampleBaseNames[0];
+const example = `${guardrails.protectedBaseNames[0]}.${guardrails.safeExampleMarkers[0]}`;
 const cases = [
   ['Copilot blocks protected paths', 'copilot-pre-tool', { tool_name: 'readFile', tool_input: { path: blocked } }, (result) => result.stdout.includes('"permissionDecision":"deny"')],
   ['Codex blocks protected paths', 'codex-pre-tool', { tool_input: { command: `cat ${blocked}` } }, (result) => result.status === 2],
