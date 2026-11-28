@@ -123,7 +123,9 @@ function denyPatterns(guardrails) {
   for (const extension of guardrails.protectedExtensions) {
     readEdit.push(`**/*${extension}`);
   }
-  readEdit.push('~/.aws/credentials', '~/.azure/**');
+  for (const fragment of guardrails.protectedPathFragments) {
+    readEdit.push(fragment.endsWith('/') ? `~/${fragment}**` : `~/${fragment}`);
+  }
 
   return readEdit;
 }
@@ -145,7 +147,6 @@ function claudeSettings(guardrails) {
   return `${JSON.stringify({
     permissions: {
       deny: [
-        'Read(~/.ssh/**)',
         ...patterns.map((pattern) => `Read(${pattern})`),
         ...patterns.map((pattern) => `Edit(${pattern})`),
         ...bashDeny,
